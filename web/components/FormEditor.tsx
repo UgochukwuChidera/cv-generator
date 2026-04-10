@@ -24,7 +24,7 @@ export function FormEditor() {
 
   const updateSkills = (csv: string) => {
     if (!mcs) return;
-    setMCS({ ...mcs, skills: csv.split(',').map((s) => ({ name: s.trim() })) });
+    setMCS({ ...mcs, skills: csv.split(',').map((s) => s.trim()).filter((s) => s).map((s) => ({ name: s })) });
   };
 
   if (!mcs) {
@@ -99,7 +99,7 @@ export function FormEditor() {
               <textarea
                 value={exp.bullets?.join('\n') || ''}
                 onChange={(e) => {
-                  updateExperience(i, { ...exp, bullets: e.target.value.split('\n') });
+                  updateExperience(i, { ...exp, bullets: e.target.value.split('\n').filter((line) => line.trim()) });
                 }}
                 rows={3}
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
