@@ -4,12 +4,13 @@ import chalk from 'chalk';
 import ora from 'ora';
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import yaml from 'js-yaml';
 import { MCSSchema } from '@nexus/schema';
 
 const program = new Command();
 
-const DATA_DIR = path.join(process.env.HOME || process.cwd(), '.nexus');
+const DATA_DIR = path.join(os.homedir(), '.nexus');
 const MCS_FILE = path.join(DATA_DIR, 'mcs.json');
 
 function ensureDataDir() {
@@ -194,6 +195,20 @@ program
     
     fs.writeFileSync(`${name}.json`, JSON.stringify(mcs, null, 2));
     fs.writeFileSync(`${name}.yaml`, yaml.dump(mcs));
+    const htmlContent = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>${mcs.personal?.name || 'Resume'}</title>
+<style>body{font-family:Georgia,serif;max-width:800px;margin:40px auto;padding:0 20px;color:#333}
+h1{font-size:2em;margin-bottom:0.2em}h2{border-bottom:1px solid #ccc;margin-top:1.5em}
+ul{padding-left:1.5em}</style></head>
+<body>
+<h1>${mcs.personal?.name || ''}</h1>
+<p>${mcs.personal?.title || ''} | ${mcs.personal?.email || ''} | ${mcs.personal?.location || ''}</p>
+${mcs.summary ? `<h2>Summary</h2><p>${mcs.summary}</p>` : ''}
+${mcs.experience?.length ? `<h2>Experience</h2>${mcs.experience.map((e: { role: string; company: string; bullets?: string[] }) => `<h3>${e.role} at ${e.company}</h3><ul>${(e.bullets || []).map((b: string) => `<li>${b}</li>`).join('')}</ul>`).join('')}` : ''}
+${mcs.skills?.length ? `<h2>Skills</h2><p>${mcs.skills.map((s: { name: string }) => s.name).join(', ')}</p>` : ''}
+</body></html>`;
+    fs.writeFileSync(`${name}.html`, htmlContent);
     console.log(chalk.green(`✅ Generated: ${formats.join(', ')}`));
   });
 

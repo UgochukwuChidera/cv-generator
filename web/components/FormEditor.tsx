@@ -9,6 +9,9 @@ export function FormEditor() {
     if (!mcs) return;
     const updated = structuredClone(mcs) as Record<string, unknown>;
     const keys = path.split('.');
+    // Guard against prototype pollution
+    const dangerousKeys = new Set(['__proto__', 'constructor', 'prototype']);
+    if (keys.some((k) => dangerousKeys.has(k))) return;
     let obj = updated as Record<string, unknown>;
     for (let i = 0; i < keys.length - 1; i++) {
       if (!obj[keys[i]]) obj[keys[i]] = {};
