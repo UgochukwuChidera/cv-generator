@@ -19,7 +19,8 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@nexus/schema": ["../packages/schema/src/index.ts"]
     }
   },
   "include": [
