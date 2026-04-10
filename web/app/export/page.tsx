@@ -3,113 +3,116 @@ import { useState } from 'react';
 import { useNexusStore } from '@/lib/store';
 import Link from 'next/link';
 
-type Format = 'pdf' | 'docx' | 'html' | 'json' | 'yaml';
-type Status = 'idle' | 'loading' | 'done' | 'error';
+type Tone = 'formal' | 'conversational' | 'technical' | 'storytelling';
 
-const FORMATS: { id: Format; icon: string; label: string; ext: string; desc: string; mime: string }[] = [
-  { id: 'pdf',  icon: '⬡', label: 'PDF',  ext: '.pdf',  desc: 'Print-ready, pixel-perfect',    mime: 'application/pdf' },
-  { id: 'docx', icon: '◈', label: 'DOCX', ext: '.docx', desc: 'Editable in Microsoft Word',     mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' },
-  { id: 'html', icon: '◇', label: 'HTML', ext: '.html', desc: 'Portfolio page, self-contained', mime: 'text/html' },
-  { id: 'json', icon: '{ }',label: 'JSON', ext: '.json', desc: 'Full schema — developer export', mime: 'application/json' },
-  { id: 'yaml', icon: '≡',  label: 'YAML', ext: '.yaml', desc: 'Human-readable data export',    mime: 'text/yaml' },
+interface JDResult {
+  score: number;
+  coverLetter: string;
+  tailored?: any;
+  missingSkills?: string[];
+  implicitSkills?: string[];
+}
+
+const TONES: { id: Tone; label: string; desc: string }[] = [
+  { id: 'formal',          label: 'Formal',       desc: 'Professional, structured' },
+  { id: 'conversational',  label: 'Conversational',desc: 'Warm, direct' },
+  { id: 'technical',       label: 'Technical',    desc: 'Credibility-first' },
+  { id: 'storytelling',    label: 'Story',         desc: 'Narrative arc' },
 ];
 
-function buildHtml(mcs: any): string {
-  const p = mcs.personal ?? {};
-  const esc = (s: string | undefined) => (s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>${esc(p.name)} — Resume</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Plus+Jakarta+Sans:wght@400;500&display=swap" rel="stylesheet">
-<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Plus Jakarta Sans',sans-serif;background:#fafaf8;color:#111;max-width:820px;margin:48px auto;padding:0 32px;font-size:14px;line-height:1.6}h1{font-family:'Playfair Display',Georgia;font-size:32px;font-weight:700;margin-bottom:4px}h2{font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#E8B84B;border-bottom:1px solid #f0e8d0;padding-bottom:6px;margin:24px 0 12px}.contact{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:12px;color:#666;margin-top:8px}.job{margin-bottom:16px}.job-header{display:flex;justify-content:space-between;align-items:baseline}.company{font-size:12px;color:#888;margin-bottom:4px}ul{padding-left:18px}li{font-size:13px;margin-bottom:3px;color:#333}.skill{display:inline-block;background:#fef3c7;border:1px solid #fde68a;border-radius:4px;padding:2px 8px;font-size:11px;margin:3px;color:#92400e}</style>
-</head><body>
-<header style="border-bottom:2px solid #E8B84B;padding-bottom:16px;margin-bottom:20px">
-<h1>${esc(p.name)}</h1>${p.title ? `<p style="color:#555;font-size:15px">${esc(p.title)}</p>` : ''}
-<div class="contact">${[p.email && `✉ ${esc(p.email)}`, p.phone && `📞 ${esc(p.phone)}`, p.location && `📍 ${esc(p.location)}`, p.linkedin && `LinkedIn: ${esc(p.linkedin)}`, p.github && `GitHub: ${esc(p.github)}`].filter(Boolean).map(s => `<span>${s}</span>`).join('')}</div>
-</header>
-${mcs.summary ? `<h2>Profile</h2><p style="color:#333;line-height:1.7">${esc(mcs.summary)}</p>` : ''}
-${(mcs.experience?.length ?? 0) > 0 ? `<h2>Experience</h2>${mcs.experience.map((e: any) => `<div class="job"><div class="job-header"><strong>${esc(e.role)}</strong><span style="font-size:11px;color:#888">${esc(e.startDate)}${e.current ? ' – Present' : e.endDate ? ` – ${esc(e.endDate)}` : ''}</span></div><p class="company">${esc(e.company)}${e.location ? ` · ${esc(e.location)}` : ''}</p>${e.bullets?.length ? `<ul>${e.bullets.map((b: string) => `<li>${esc(b)}</li>`).join('')}</ul>` : ''}</div>`).join('')}` : ''}
-${(mcs.education?.length ?? 0) > 0 ? `<h2>Education</h2>${mcs.education.map((e: any) => `<div class="job"><div class="job-header"><strong>${esc(e.institution)}</strong><span style="font-size:11px;color:#888">${esc(e.startDate)}${e.endDate ? ` – ${esc(e.endDate)}` : ''}</span></div><p class="company">${esc(e.degree)}${e.field ? ` in ${esc(e.field)}` : ''}${e.gpa ? ` · GPA ${esc(e.gpa)}` : ''}</p></div>`).join('')}` : ''}
-${(mcs.skills?.length ?? 0) > 0 ? `<h2>Skills</h2><div>${mcs.skills.map((s: any) => `<span class="skill">${esc(s.name)}</span>`).join('')}</div>` : ''}
-</body></html>`;
+function ScoreRing({ score }: { score: number }) {
+  const r = 54;
+  const circ = 2 * Math.PI * r;
+  const offset = circ - (score / 100) * circ;
+  const color = score >= 75 ? '#52B788' : score >= 50 ? '#E8B84B' : '#E05252';
+  const label = score >= 75 ? 'Strong fit' : score >= 50 ? 'Moderate fit' : 'Weak fit';
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+      <svg width={130} height={130} viewBox="0 0 130 130" style={{ transform: 'rotate(-90deg)' }}>
+        <circle cx={65} cy={65} r={r} fill="none" stroke="var(--border-2)" strokeWidth={8} />
+        <circle cx={65} cy={65} r={r} fill="none" stroke={color} strokeWidth={8} strokeLinecap="round"
+          strokeDasharray={circ} strokeDashoffset={offset}
+          style={{ transition: 'stroke-dashoffset 1.2s cubic-bezier(0.34,1.56,0.64,1)', filter: `drop-shadow(0 0 6px ${color}50)` }} />
+        <text x={65} y={65} textAnchor="middle" dominantBaseline="middle"
+          style={{ transform: 'rotate(90deg)', transformOrigin: '65px 65px', fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 700, fill: color }}>
+          {score}
+        </text>
+      </svg>
+      <span className="pill-gold" style={{ background: `${color}15`, borderColor: `${color}40`, color }}>{label}</span>
+    </div>
+  );
 }
 
-function downloadBlob(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href = url; a.download = filename;
-  document.body.appendChild(a); a.click();
-  document.body.removeChild(a); URL.revokeObjectURL(url);
-}
+export default function JDTargetingPage() {
+  const { mcs, aiProvider, aiKey, aiModel, setMCS } = useNexusStore();
+  const [jd, setJd] = useState('');
+  const [tone, setTone] = useState<Tone>('formal');
+  const [loading, setLoading] = useState(false);
+  const [loadingCover, setLoadingCover] = useState(false);
+  const [result, setResult] = useState<JDResult | null>(null);
+  const [coverLetter, setCoverLetter] = useState('');
+  const [copied, setCopied] = useState(false);
 
-export default function ExportPage() {
-  const { mcs } = useNexusStore();
-  const [statuses, setStatuses] = useState<Record<Format, Status>>({ pdf: 'idle', docx: 'idle', html: 'idle', json: 'idle', yaml: 'idle' });
-
-  function setStatus(fmt: Format, s: Status) {
-    setStatuses(prev => ({ ...prev, [fmt]: s }));
+  async function handleAnalyse() {
+    if (!jd.trim() || !mcs || !aiKey) return;
+    setLoading(true); setResult(null);
+    try {
+      const res = await fetch('/api/ai/target', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': aiKey },
+        body: JSON.stringify({ mcs, jd, provider: aiProvider, model: aiModel }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      if (data.tailored) setMCS(data.tailored);
+      setResult({ score: data.score, coverLetter: data.coverLetter, missingSkills: data.missingSkills, implicitSkills: data.implicitSkills });
+      setCoverLetter(data.coverLetter ?? '');
+    } catch (e) { alert('Analysis failed: ' + String(e)); }
+    finally { setLoading(false); }
   }
 
-  async function handleExport(fmt: Format) {
-    if (!mcs) return;
-    setStatus(fmt, 'loading');
-    const slug = (mcs.personal?.name ?? 'resume').toLowerCase().replace(/\s+/g, '-');
-
+  async function handleGenerateCover() {
+    if (!jd.trim() || !mcs || !aiKey) return;
+    setLoadingCover(true); setCoverLetter('');
     try {
-      if (fmt === 'json') {
-        const blob = new Blob([JSON.stringify(mcs, null, 2)], { type: 'application/json' });
-        downloadBlob(blob, `${slug}.json`);
-        setStatus(fmt, 'done');
-        setTimeout(() => setStatus(fmt, 'idle'), 2000);
-        return;
-      }
-      if (fmt === 'yaml') {
-        const yaml = await import('js-yaml');
-        const blob = new Blob([yaml.dump(mcs)], { type: 'text/yaml' });
-        downloadBlob(blob, `${slug}.yaml`);
-        setStatus(fmt, 'done');
-        setTimeout(() => setStatus(fmt, 'idle'), 2000);
-        return;
-      }
-      if (fmt === 'html') {
-        const blob = new Blob([buildHtml(mcs)], { type: 'text/html' });
-        downloadBlob(blob, `${slug}.html`);
-        setStatus(fmt, 'done');
-        setTimeout(() => setStatus(fmt, 'idle'), 2000);
-        return;
-      }
-      if (fmt === 'pdf') {
-        // Trigger print dialog on the preview
-        const preview = window.open('/api/generate/preview?' + new URLSearchParams({ mcs: JSON.stringify(mcs) }), '_blank');
-        if (!preview) alert('Allow pop-ups to generate PDF, then use File → Print → Save as PDF.');
-        setStatus(fmt, 'done');
-        setTimeout(() => setStatus(fmt, 'idle'), 2000);
-        return;
-      }
-      if (fmt === 'docx') {
-        const res = await fetch('/api/generate/docx', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ mcs }),
-        });
-        if (!res.ok) throw new Error('DOCX generation failed — add the server-side route.');
-        const blob = await res.blob();
-        downloadBlob(blob, `${slug}.docx`);
-        setStatus(fmt, 'done');
-        setTimeout(() => setStatus(fmt, 'idle'), 2000);
-        return;
-      }
-    } catch (e) {
-      console.error(e);
-      setStatus(fmt, 'error');
-      setTimeout(() => setStatus(fmt, 'idle'), 3000);
+      const res = await fetch('/api/ai/generate-cover', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': aiKey },
+        body: JSON.stringify({ mcs, jd, tone, provider: aiProvider, model: aiModel }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      setCoverLetter(data.coverLetter ?? '');
+    } catch (e) { alert('Generation failed: ' + String(e)); }
+    finally { setLoadingCover(false); }
+  }
+
+  function downloadCoverLetter(fmt: 'txt' | 'html') {
+    if (!coverLetter) return;
+    const name = (mcs?.personal?.name ?? 'cover-letter').toLowerCase().replace(/\s+/g, '-');
+    if (fmt === 'txt') {
+      const blob = new Blob([coverLetter], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = `${name}-cover-letter.txt`;
+      a.click(); URL.revokeObjectURL(url);
+    }
+    if (fmt === 'html') {
+      const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Cover Letter — ${mcs?.personal?.name ?? ''}</title><link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Plus+Jakarta+Sans&display=swap" rel="stylesheet"><style>body{font-family:'Plus Jakarta Sans',sans-serif;max-width:680px;margin:60px auto;padding:0 32px;color:#111;line-height:1.75;font-size:15px}h1{font-family:'Playfair Display';font-size:24px;margin-bottom:24px}p{margin-bottom:16px}</style></head><body><h1>Cover Letter — ${mcs?.personal?.name ?? ''}</h1>${coverLetter.split('\n\n').map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`).join('')}</body></html>`;
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = `${name}-cover-letter.html`;
+      a.click(); URL.revokeObjectURL(url);
     }
   }
 
-  const statusIcon = (s: Status) => ({
-    idle: null, loading: '⌛', done: '✓', error: '✕',
-  }[s]);
+  function copyToClipboard() {
+    navigator.clipboard.writeText(coverLetter);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
 
-  const statusColor = (s: Status) => ({
-    idle: 'var(--text-2)', loading: 'var(--gold)', done: 'var(--green)', error: 'var(--red)',
-  }[s]);
+  const noKey = !aiKey;
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
@@ -119,69 +122,132 @@ export default function ExportPage() {
           <div style={{ width: 28, height: 28, background: 'var(--gold)', borderRadius: 'var(--r)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: 'var(--text-inv)' }}>⬡</div>
           <span className="display" style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)' }}>Nexus</span>
         </Link>
-        <span style={{ color: 'var(--text-3)', fontSize: 13 }}>/ Export</span>
+        <span style={{ color: 'var(--text-3)', fontSize: 13 }}>/ JD Targeting</span>
         <div style={{ flex: 1 }} />
         <Link href="/editor" className="btn btn-ghost" style={{ textDecoration: 'none', fontSize: 13 }}>← Editor</Link>
+        <Link href="/export" className="btn btn-gold" style={{ textDecoration: 'none', fontSize: 13 }}>Export ↗</Link>
       </div>
 
-      {/* Content */}
-      <div style={{ flex: 1, maxWidth: 680, width: '100%', margin: '0 auto', padding: '48px 24px' }}>
-        <div style={{ marginBottom: 40 }}>
-          <h1 className="display" style={{ fontSize: 28, fontWeight: 600, color: 'var(--text)', marginBottom: 8 }}>Export</h1>
-          <p style={{ color: 'var(--text-2)', fontSize: 14 }}>
-            Download your profile as any format. Documents are generated from your current editor state.
-          </p>
-          {!mcs && (
-            <div style={{ marginTop: 12, padding: '10px 14px', background: 'rgba(224,82,82,0.08)', border: '1px solid rgba(224,82,82,0.2)', borderRadius: 'var(--r)', fontSize: 13, color: 'var(--red)' }}>
-              No data loaded — <Link href="/" style={{ color: 'var(--red)', fontWeight: 500 }}>build your profile first</Link>.
+      {/* Body */}
+      <div style={{ flex: 1, maxWidth: 1000, width: '100%', margin: '0 auto', padding: '40px 24px', display: 'grid', gridTemplateColumns: '1fr 340px', gap: 24, alignItems: 'start' }}>
+
+        {/* Left — JD input + cover letter */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div>
+            <h1 className="display" style={{ fontSize: 26, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>JD Targeting</h1>
+            <p style={{ fontSize: 13, color: 'var(--text-2)' }}>
+              Paste a job description — Nexus scores your fit, identifies gaps, and generates a tailored cover letter. Non-destructive: your master profile is not overwritten.
+            </p>
+          </div>
+
+          {noKey && (
+            <div style={{ padding: '10px 14px', background: 'rgba(232,184,75,0.08)', border: '1px solid rgba(232,184,75,0.2)', borderRadius: 'var(--r)', fontSize: 13, color: 'var(--gold)' }}>
+              ⚡ Set your AI key on the <Link href="/" style={{ color: 'var(--gold)', fontWeight: 600 }}>home page</Link> first.
             </div>
           )}
+
+          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-3)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Job description</span>
+              <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{jd.length} chars</span>
+            </div>
+            <textarea
+              value={jd} onChange={e => setJd(e.target.value)}
+              placeholder="Paste the full job description here…"
+              rows={12}
+              style={{ width: '100%', background: 'transparent', border: 'none', padding: '14px 16px', fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--text)', outline: 'none', resize: 'none', lineHeight: 1.65 }}
+            />
+            <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', display: 'flex', gap: 8 }}>
+              <button className="btn btn-gold" onClick={handleAnalyse} disabled={!jd.trim() || !mcs || loading || noKey} style={{ flex: 1, justifyContent: 'center' }}>
+                {loading ? <><span className="spinner spinner-sm" /> Analysing…</> : '⚡ Analyse fit'}
+              </button>
+            </div>
+          </div>
+
+          {/* Cover letter section */}
+          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-3)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Cover letter</span>
+              {coverLetter && (
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button className="btn btn-ghost" onClick={copyToClipboard} style={{ padding: '4px 10px', fontSize: 11 }}>{copied ? '✓ Copied' : 'Copy'}</button>
+                  <button className="btn btn-ghost" onClick={() => downloadCoverLetter('html')} style={{ padding: '4px 10px', fontSize: 11 }}>↓ HTML</button>
+                  <button className="btn btn-ghost" onClick={() => downloadCoverLetter('txt')} style={{ padding: '4px 10px', fontSize: 11 }}>↓ TXT</button>
+                </div>
+              )}
+            </div>
+
+            {/* Tone picker */}
+            <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--border)', display: 'flex', gap: 6 }}>
+              {TONES.map(t => (
+                <button key={t.id} onClick={() => setTone(t.id)}
+                  style={{ flex: 1, padding: '6px 0', borderRadius: 'var(--r)', background: tone === t.id ? 'var(--gold-dim)' : 'var(--surface-2)', border: `1px solid ${tone === t.id ? 'rgba(232,184,75,0.35)' : 'var(--border)'}`, color: tone === t.id ? 'var(--gold)' : 'var(--text-3)', fontSize: 11, cursor: 'pointer', fontWeight: tone === t.id ? 600 : 400 }}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Output */}
+            <div style={{ padding: '14px 16px', minHeight: 140, position: 'relative' }}>
+              {loadingCover ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {[1, 0.7, 0.85, 0.5].map((w, i) => <div key={i} className="shimmer-bar" style={{ height: 12, width: `${w * 100}%` }} />)}
+                </div>
+              ) : coverLetter ? (
+                <textarea value={coverLetter} onChange={e => setCoverLetter(e.target.value)} rows={12}
+                  style={{ width: '100%', background: 'transparent', border: 'none', fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--text)', outline: 'none', resize: 'none', lineHeight: 1.7 }} />
+              ) : (
+                <p style={{ color: 'var(--text-3)', fontSize: 13, textAlign: 'center', paddingTop: 24 }}>
+                  {jd.trim() ? 'Generate a cover letter below' : 'Paste a job description first'}
+                </p>
+              )}
+            </div>
+
+            <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)' }}>
+              <button className="btn btn-ghost" onClick={handleGenerateCover} disabled={!jd.trim() || !mcs || loadingCover || noKey} style={{ width: '100%', justifyContent: 'center' }}>
+                {loadingCover ? <><span className="spinner spinner-sm" /> Writing…</> : '✦ Generate cover letter'}
+              </button>
+            </div>
+          </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-          {FORMATS.map(f => {
-            const s = statuses[f.id];
-            return (
-              <button key={f.id} className="format-card" onClick={() => handleExport(f.id)}
-                disabled={!mcs || s === 'loading'}
-                style={{ textAlign: 'left', cursor: !mcs || s === 'loading' ? 'not-allowed' : 'pointer', opacity: !mcs ? 0.45 : 1, borderColor: s === 'done' ? 'var(--green)' : s === 'error' ? 'var(--red)' : s === 'loading' ? 'var(--gold)' : 'var(--border)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                  <div style={{ width: 40, height: 40, background: 'var(--surface-2)', borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: 'var(--text-2)' }}>{f.icon}</div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    {s === 'loading' && <span className="spinner spinner-sm" />}
-                    {(s === 'done' || s === 'error') && (
-                      <span style={{ fontSize: 14, color: statusColor(s) }}>{statusIcon(s)}</span>
-                    )}
-                    <span style={{ fontSize: 11, color: 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>{f.ext}</span>
+        {/* Right — score + gaps */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, position: 'sticky', top: 24 }}>
+          {result ? (
+            <>
+              <div className="card" style={{ padding: 24, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+                <ScoreRing score={result.score} />
+              </div>
+
+              {result.missingSkills && result.missingSkills.length > 0 && (
+                <div className="card" style={{ padding: 16 }}>
+                  <p className="label" style={{ marginBottom: 10 }}>⚠ Missing from your profile</p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {result.missingSkills.map((s, i) => (
+                      <span key={i} style={{ background: 'var(--red-dim)', border: '1px solid rgba(224,82,82,0.2)', borderRadius: 99, padding: '3px 10px', fontSize: 12, color: 'var(--red)' }}>{s}</span>
+                    ))}
                   </div>
                 </div>
-                <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)', marginBottom: 3 }}>{f.label}</p>
-                <p style={{ fontSize: 12, color: 'var(--text-3)', lineHeight: 1.4 }}>{f.desc}</p>
-                <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: 12, color: statusColor(s) }}>
-                    {s === 'idle' ? 'Click to download' : s === 'loading' ? 'Generating…' : s === 'done' ? 'Downloaded!' : 'Error — retry'}
-                  </span>
-                  {s === 'idle' && <span style={{ fontSize: 14, color: 'var(--text-3)' }}>↓</span>}
-                </div>
-              </button>
-            );
-          })}
-        </div>
+              )}
 
-        {/* Cover letter card */}
-        <div style={{ marginTop: 24 }}>
-          <Link href="/jd-targeting" style={{ textDecoration: 'none', display: 'block' }}>
-            <div className="card" style={{ padding: 20, display: 'flex', alignItems: 'center', gap: 16, cursor: 'pointer', transition: 'border-color 0.15s' }}
-              onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--gold)')}
-              onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}>
-              <div style={{ width: 44, height: 44, background: 'var(--gold-dim)', borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>⚡</div>
-              <div>
-                <p style={{ fontWeight: 600, color: 'var(--text)', marginBottom: 2 }}>Generate cover letter</p>
-                <p style={{ fontSize: 12, color: 'var(--text-3)' }}>Paste a job description → AI tailors and writes a cover letter → export as PDF, DOCX, or HTML</p>
-              </div>
-              <span style={{ marginLeft: 'auto', color: 'var(--text-3)', fontSize: 16, flexShrink: 0 }}>→</span>
+              {result.implicitSkills && result.implicitSkills.length > 0 && (
+                <div className="card" style={{ padding: 16 }}>
+                  <p className="label" style={{ marginBottom: 10 }}>✦ You have but haven't mentioned</p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {result.implicitSkills.map((s, i) => (
+                      <span key={i} className="pill-gold" style={{ fontSize: 11 }}>{s}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="card" style={{ padding: 32, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, textAlign: 'center' }}>
+              <div style={{ fontSize: 36 }}>⚡</div>
+              <p style={{ fontWeight: 600, color: 'var(--text)', fontSize: 14 }}>Fit score</p>
+              <p style={{ fontSize: 12, color: 'var(--text-3)', lineHeight: 1.5 }}>Paste a job description and click Analyse to see how well your profile matches the role.</p>
             </div>
-          </Link>
+          )}
         </div>
       </div>
     </div>
