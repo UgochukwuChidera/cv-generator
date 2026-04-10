@@ -1,0 +1,27 @@
+{
+  "name": "@nexus/cli",
+  "version": "1.0.0",
+  "description": "Nexus CLI — career document generator",
+  "type": "module",
+  "bin": {
+    "nexus": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "commander": "^11.1.0",
+    "inquirer": "^9.2.12",
+    "js-yaml": "^4.1.0",
+    "ora": "^7.0.1",
+    "@nexus/schema": "*"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^20.11.5"
+  }
+}

@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Next.js
+web/.next/
+web/out/
+
+# Build outputs
+**/dist/
+
+# Environment
+.env
+.env.local
+.env.production.local
+.env.development.local
+
+# Misc
+.DS_Store
+*.log
+npm-debug.log*
