@@ -2,6 +2,15 @@
 import { useState } from 'react';
 import { useNexusStore } from '@/lib/store';
 
+function esc(str: string | undefined | null): string {
+  return (str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 const FORMATS = [
   { id: 'json', label: 'JSON', ext: '.json', mime: 'application/json' },
   { id: 'yaml', label: 'YAML', ext: '.yaml', mime: 'application/x-yaml' },
@@ -25,16 +34,16 @@ export function ExportPanel() {
       } else if (format === 'html') {
         content = `<!DOCTYPE html>
 <html lang="en">
-<head><meta charset="UTF-8"><title>${mcs.personal?.name || 'Resume'}</title>
+<head><meta charset="UTF-8"><title>${esc(mcs.personal?.name) || 'Resume'}</title>
 <style>body{font-family:Georgia,serif;max-width:800px;margin:40px auto;padding:0 20px;color:#333}
 h1{font-size:2em;margin-bottom:0.2em}h2{border-bottom:1px solid #ccc;margin-top:1.5em}
 ul{padding-left:1.5em}</style></head>
 <body>
-<h1>${mcs.personal?.name || ''}</h1>
-<p>${mcs.personal?.title || ''} | ${mcs.personal?.email || ''} | ${mcs.personal?.location || ''}</p>
-${mcs.summary ? `<h2>Summary</h2><p>${mcs.summary}</p>` : ''}
-${mcs.experience?.length ? `<h2>Experience</h2>${mcs.experience.map((e) => `<h3>${e.role} at ${e.company}</h3><ul>${(e.bullets || []).map((b) => `<li>${b}</li>`).join('')}</ul>`).join('')}` : ''}
-${mcs.skills?.length ? `<h2>Skills</h2><p>${mcs.skills.map((s) => s.name).join(', ')}</p>` : ''}
+<h1>${esc(mcs.personal?.name)}</h1>
+<p>${esc(mcs.personal?.title)} | ${esc(mcs.personal?.email)} | ${esc(mcs.personal?.location)}</p>
+${mcs.summary ? `<h2>Summary</h2><p>${esc(mcs.summary)}</p>` : ''}
+${mcs.experience?.length ? `<h2>Experience</h2>${mcs.experience.map((e) => `<h3>${esc(e.role)} at ${esc(e.company)}</h3><ul>${(e.bullets || []).map((b) => `<li>${esc(b)}</li>`).join('')}</ul>`).join('')}` : ''}
+${mcs.skills?.length ? `<h2>Skills</h2><p>${mcs.skills.map((s) => esc(s.name)).join(', ')}</p>` : ''}
 </body></html>`;
       }
       const blob = new Blob([content], { type: mime });

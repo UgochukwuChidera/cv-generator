@@ -60,8 +60,8 @@ export async function callAI(
 
   if (provider === 'gemini') {
     const rawModel = model || 'gemini-1.5-flash';
-    // Validate model name to prevent URL injection (only allow alphanumeric, hyphens, dots)
-    const modelName = /^[\w.-]+$/.test(rawModel) ? rawModel : 'gemini-1.5-flash';
+    // Validate model name to prevent URL injection (only allow alphanumeric, hyphens, and dots)
+    const modelName = /^[a-z0-9.-]+$/i.test(rawModel) ? rawModel : 'gemini-1.5-flash';
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`,
       {

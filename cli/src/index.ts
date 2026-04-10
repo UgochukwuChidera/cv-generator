@@ -13,6 +13,15 @@ const program = new Command();
 const DATA_DIR = path.join(os.homedir(), '.nexus');
 const MCS_FILE = path.join(DATA_DIR, 'mcs.json');
 
+function esc(str: string | undefined | null): string {
+  return (str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function ensureDataDir() {
   if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -131,7 +140,7 @@ program
         } else if (fmt === 'html') {
           content = `<!DOCTYPE html>
 <html lang="en">
-<head><meta charset="UTF-8"><title>${mcs.personal?.name || 'Resume'}</title>
+<head><meta charset="UTF-8"><title>${esc(mcs.personal?.name) || 'Resume'}</title>
 <style>
   body { font-family: Georgia, serif; max-width: 800px; margin: 40px auto; padding: 0 20px; color: #333; }
   h1 { font-size: 2em; margin-bottom: 0.2em; }
@@ -145,28 +154,28 @@ program
 </style>
 </head>
 <body>
-<h1>${mcs.personal?.name || ''}</h1>
-<p class="contact">${[mcs.personal?.title, mcs.personal?.email, mcs.personal?.phone, mcs.personal?.location].filter(Boolean).join(' | ')}</p>
-${mcs.summary ? `<h2>Summary</h2><p>${mcs.summary}</p>` : ''}
+<h1>${esc(mcs.personal?.name)}</h1>
+<p class="contact">${[mcs.personal?.title, mcs.personal?.email, mcs.personal?.phone, mcs.personal?.location].filter(Boolean).map(esc).join(' | ')}</p>
+${mcs.summary ? `<h2>Summary</h2><p>${esc(mcs.summary)}</p>` : ''}
 ${mcs.experience?.length ? `<h2>Experience</h2>${mcs.experience.map((e: { role: string; company: string; startDate?: string; current?: boolean; endDate?: string; location?: string; bullets?: string[] }) => `
   <div class="job">
     <div class="job-header">
-      <strong>${e.role}</strong>
-      <span class="date">${e.startDate || ''} – ${e.current ? 'Present' : e.endDate || ''}</span>
+      <strong>${esc(e.role)}</strong>
+      <span class="date">${esc(e.startDate)} &#8211; ${e.current ? 'Present' : esc(e.endDate)}</span>
     </div>
-    <div class="company">${e.company}${e.location ? ', ' + e.location : ''}</div>
-    ${e.bullets?.length ? `<ul>${e.bullets.map((b: string) => `<li>${b}</li>`).join('')}</ul>` : ''}
+    <div class="company">${esc(e.company)}${e.location ? ', ' + esc(e.location) : ''}</div>
+    ${e.bullets?.length ? `<ul>${e.bullets.map((b: string) => `<li>${esc(b)}</li>`).join('')}</ul>` : ''}
   </div>`).join('')}` : ''}
 ${mcs.education?.length ? `<h2>Education</h2>${mcs.education.map((edu: { institution: string; degree?: string; field?: string; startDate?: string; endDate?: string; gpa?: string }) => `
   <div class="job">
     <div class="job-header">
-      <strong>${edu.institution}</strong>
-      <span class="date">${edu.startDate || ''} – ${edu.endDate || ''}</span>
+      <strong>${esc(edu.institution)}</strong>
+      <span class="date">${esc(edu.startDate)} &#8211; ${esc(edu.endDate)}</span>
     </div>
-    <div class="company">${[edu.degree, edu.field ? 'in ' + edu.field : ''].filter(Boolean).join(' ')}</div>
-    ${edu.gpa ? `<div>GPA: ${edu.gpa}</div>` : ''}
+    <div class="company">${[edu.degree, edu.field ? 'in ' + edu.field : ''].filter(Boolean).map(esc).join(' ')}</div>
+    ${edu.gpa ? `<div>GPA: ${esc(edu.gpa)}</div>` : ''}
   </div>`).join('')}` : ''}
-${mcs.skills?.length ? `<h2>Skills</h2><p>${mcs.skills.map((s: { name: string }) => s.name).join(' · ')}</p>` : ''}
+${mcs.skills?.length ? `<h2>Skills</h2><p>${mcs.skills.map((s: { name: string }) => esc(s.name)).join(' &middot; ')}</p>` : ''}
 </body></html>`;
           fs.writeFileSync(`${name}.html`, content);
         }
