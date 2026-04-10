@@ -1,24 +1,30 @@
 'use client';
 import { useNexusStore } from '@/lib/store';
-import type { MCS } from '@nexus/schema';
+import type { MCS, Personal, Experience } from '@nexus/schema';
 
 export function FormEditor() {
   const { mcs, setMCS } = useNexusStore();
 
-  const update = (path: string, value: unknown) => {
+  const updatePersonal = (field: keyof Personal, value: string) => {
     if (!mcs) return;
-    const updated = structuredClone(mcs) as Record<string, unknown>;
-    const keys = path.split('.');
-    // Guard against prototype pollution
-    const dangerousKeys = new Set(['__proto__', 'constructor', 'prototype']);
-    if (keys.some((k) => dangerousKeys.has(k))) return;
-    let obj = updated as Record<string, unknown>;
-    for (let i = 0; i < keys.length - 1; i++) {
-      if (!obj[keys[i]]) obj[keys[i]] = {};
-      obj = obj[keys[i]] as Record<string, unknown>;
-    }
-    obj[keys[keys.length - 1]] = value;
-    setMCS(updated as MCS);
+    setMCS({ ...mcs, personal: { ...mcs.personal, [field]: value } });
+  };
+
+  const updateSummary = (value: string) => {
+    if (!mcs) return;
+    setMCS({ ...mcs, summary: value });
+  };
+
+  const updateExperience = (index: number, updated: Experience) => {
+    if (!mcs) return;
+    const exps = [...(mcs.experience || [])];
+    exps[index] = updated;
+    setMCS({ ...mcs, experience: exps });
+  };
+
+  const updateSkills = (csv: string) => {
+    if (!mcs) return;
+    setMCS({ ...mcs, skills: csv.split(',').map((s) => ({ name: s.trim() })) });
   };
 
   if (!mcs) {
@@ -41,8 +47,8 @@ export function FormEditor() {
               <label className="block text-xs font-medium text-gray-600 mb-1 capitalize">{field}</label>
               <input
                 type={field === 'email' ? 'email' : 'text'}
-                value={(mcs.personal as Record<string, string>)?.[field] || ''}
-                onChange={(e) => update(`personal.${field}`, e.target.value)}
+                value={mcs.personal?.[field] || ''}
+                onChange={(e) => updatePersonal(field, e.target.value)}
                 className="w-full border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -55,7 +61,7 @@ export function FormEditor() {
         <h2 className="text-base font-semibold text-gray-800 mb-3 border-b pb-2">Summary</h2>
         <textarea
           value={mcs.summary || ''}
-          onChange={(e) => update('summary', e.target.value)}
+          onChange={(e) => updateSummary(e.target.value)}
           rows={4}
           className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
@@ -72,9 +78,7 @@ export function FormEditor() {
                 <input
                   value={exp.role || ''}
                   onChange={(e) => {
-                    const exps = [...(mcs.experience || [])];
-                    exps[i] = { ...exps[i], role: e.target.value };
-                    update('experience', exps);
+                    updateExperience(i, { ...exp, role: e.target.value });
                   }}
                   className="w-full border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
@@ -84,9 +88,7 @@ export function FormEditor() {
                 <input
                   value={exp.company || ''}
                   onChange={(e) => {
-                    const exps = [...(mcs.experience || [])];
-                    exps[i] = { ...exps[i], company: e.target.value };
-                    update('experience', exps);
+                    updateExperience(i, { ...exp, company: e.target.value });
                   }}
                   className="w-full border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
@@ -97,9 +99,7 @@ export function FormEditor() {
               <textarea
                 value={exp.bullets?.join('\n') || ''}
                 onChange={(e) => {
-                  const exps = [...(mcs.experience || [])];
-                  exps[i] = { ...exps[i], bullets: e.target.value.split('\n') };
-                  update('experience', exps);
+                  updateExperience(i, { ...exp, bullets: e.target.value.split('\n') });
                 }}
                 rows={3}
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -114,9 +114,7 @@ export function FormEditor() {
         <h2 className="text-base font-semibold text-gray-800 mb-3 border-b pb-2">Skills</h2>
         <input
           value={mcs.skills?.map((s) => s.name).join(', ') || ''}
-          onChange={(e) =>
-            update('skills', e.target.value.split(',').map((s) => ({ name: s.trim() })))
-          }
+          onChange={(e) => updateSkills(e.target.value)}
           placeholder="Python, TypeScript, React, AWS..."
           className="w-full border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
