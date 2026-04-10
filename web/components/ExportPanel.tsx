@@ -20,6 +20,8 @@ const FORMATS = [
 export function ExportPanel() {
   const { mcs } = useNexusStore();
   const [loading, setLoading] = useState<string | null>(null);
+  type ExperienceItem = NonNullable<typeof mcs>['experience'][number];
+  type SkillItem = NonNullable<typeof mcs>['skills'][number];
 
   async function exportAs(format: string, ext: string, mime: string) {
     if (!mcs) return;
@@ -42,8 +44,8 @@ ul{padding-left:1.5em}</style></head>
 <h1>${esc(mcs.personal?.name)}</h1>
 <p>${esc(mcs.personal?.title)} | ${esc(mcs.personal?.email)} | ${esc(mcs.personal?.location)}</p>
 ${mcs.summary ? `<h2>Summary</h2><p>${esc(mcs.summary)}</p>` : ''}
-${mcs.experience?.length ? `<h2>Experience</h2>${mcs.experience.map((e: NonNullable<typeof mcs>['experience'][number]) => `<h3>${esc(e.role)} at ${esc(e.company)}</h3><ul>${(e.bullets || []).map((b: string) => `<li>${esc(b)}</li>`).join('')}</ul>`).join('')}` : ''}
-${mcs.skills?.length ? `<h2>Skills</h2><p>${mcs.skills.map((s: NonNullable<typeof mcs>['skills'][number]) => esc(s.name)).join(', ')}</p>` : ''}
+${mcs.experience?.length ? `<h2>Experience</h2>${mcs.experience.map((e: ExperienceItem) => `<h3>${esc(e.role)} at ${esc(e.company)}</h3><ul>${(e.bullets || []).map((b: string) => `<li>${esc(b)}</li>`).join('')}</ul>`).join('')}` : ''}
+${mcs.skills?.length ? `<h2>Skills</h2><p>${mcs.skills.map((s: SkillItem) => esc(s.name)).join(', ')}</p>` : ''}
 </body></html>`;
       }
       const blob = new Blob([content], { type: mime });
