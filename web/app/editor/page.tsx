@@ -118,7 +118,7 @@ function ExperienceTab() {
           <div className="entry-header" onClick={() => setOpen(open === i ? null : i)}>
             <div style={{ width: 6, height: 6, borderRadius: '50%', background: open === i ? 'var(--gold)' : 'var(--text-3)', flexShrink: 0, marginTop: 1 }} />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', truncate: true, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {exp.role || 'New role'}{exp.company ? ` · ${exp.company}` : ''}
               </p>
               <p style={{ fontSize: 11, color: 'var(--text-3)' }}>
