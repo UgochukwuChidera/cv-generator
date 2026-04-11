@@ -29,8 +29,10 @@ const SECTIONS: Array<{ id: SectionId; label: string }> = [
 ];
 const THEMES = ['Professional (ATS Safe)', 'Modern (Dark Mode)', 'Academic', 'Minimal', 'Creative'] as const;
 const FORMATS = ['PDF', 'DOCX', 'HTML', 'JSON', 'YAML'] as const;
+// One particle per ~9000px² keeps the ambient background subtle without visual clutter.
+const PARTICLE_DENSITY_AREA = 9000;
 
-const BASE_KEY: KeyConfig = { provider: 'openai', key: '', model: '', baseUrl: 'https://openrouter.ai/api/v1' };
+const BASE_KEY: KeyConfig = { provider: 'openai', key: '', model: '', baseUrl: '' };
 
 function autoR(el: HTMLTextAreaElement, max = 140) {
   el.style.height = 'auto';
@@ -60,9 +62,20 @@ function loadKey(): KeyConfig | null {
   const raw = s.getItem('nexus-key');
   if (!raw) return null;
   try {
-    const x = JSON.parse(raw) as Partial<KeyConfig>;
-    if (!x.key) return null;
-    return { provider: x.provider ?? 'openai', key: x.key, model: x.model ?? '', baseUrl: x.baseUrl ?? BASE_KEY.baseUrl };
+    const x = JSON.parse(raw) as unknown;
+    if (!x || typeof x !== 'object') return null;
+    const o = x as Record<string, unknown>;
+    if (typeof o.key !== 'string' || !o.key.trim()) return null;
+    const provider: ProviderId =
+      o.provider === 'anthropic' || o.provider === 'openai' || o.provider === 'gemini' || o.provider === 'openrouter'
+        ? o.provider
+        : 'openai';
+    return {
+      provider,
+      key: o.key,
+      model: typeof o.model === 'string' ? o.model : '',
+      baseUrl: typeof o.baseUrl === 'string' ? o.baseUrl : '',
+    };
   } catch {
     return null;
   }
@@ -128,8 +141,8 @@ export default function Home() {
   const [page, setPage] = useState<PageId>('chat');
   const [status, setStatus] = useState('Ready');
   const [showModal, setShowModal] = useState(false);
-  const [keyConfig, setKeyConfig] = useState<KeyConfig>(BASE_KEY);
-  const [draftKey, setDraftKey] = useState<KeyConfig>(BASE_KEY);
+  const [keyConfig, setKeyConfig] = useState<KeyConfig>(() => loadKey() ?? BASE_KEY);
+  const [draftKey, setDraftKey] = useState<KeyConfig>(() => loadKey() ?? BASE_KEY);
 
   const [chatInput, setChatInput] = useState('');
   const [typing, setTyping] = useState(false);
@@ -166,14 +179,6 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    const k = loadKey();
-    if (k) {
-      setKeyConfig(k);
-      setDraftKey(k);
-    }
-  }, []);
-
-  useEffect(() => {
     if (!chatRef.current) return;
     chatRef.current.scrollTop = chatRef.current.scrollHeight;
   }, [msgs, typing]);
@@ -201,7 +206,7 @@ export default function Home() {
       canvas.style.width = `${window.innerWidth}px`;
       canvas.style.height = `${window.innerHeight}px`;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const count = Math.max(36, Math.floor((window.innerWidth * window.innerHeight) / 9000));
+      const count = Math.max(36, Math.floor((window.innerWidth * window.innerHeight) / PARTICLE_DENSITY_AREA));
       parts = Array.from({ length: count }, () => ({
         x: Math.random() * window.innerWidth,
         y: Math.random() * window.innerHeight,
@@ -211,7 +216,7 @@ export default function Home() {
         vy: (Math.random() - 0.5) * 0.22,
         r: Math.random() * Math.PI,
         vr: (Math.random() - 0.5) * 0.01,
-        c: COLS[Math.floor(Math.random() * COLS.length)] ?? COLS[0],
+        c: COLS[Math.floor(Math.random() * COLS.length)],
       }));
     };
 
@@ -265,10 +270,33 @@ export default function Home() {
   }
 
   function saveModal() {
-    setKeyConfig(draftKey);
-    storeKey(draftKey);
+    const next = {
+      ...draftKey,
+      baseUrl:
+        draftKey.provider === 'openrouter'
+          ? draftKey.baseUrl || 'https://openrouter.ai/api/v1'
+          : draftKey.baseUrl,
+    };
+    setKeyConfig(next);
+    storeKey(next);
     setStatusTimed('API key saved');
     setShowModal(false);
+  }
+
+  function updateCardValue(msgId: number, rowIndex: number, value: string) {
+    setMsgs((prev) =>
+      prev.map((m) =>
+        m.id === msgId && m.data
+          ? {
+              ...m,
+              data: {
+                ...m.data,
+                rows: m.data.rows.map((row, i) => (i === rowIndex ? { ...row, value } : row)),
+              },
+            }
+          : m
+      )
+    );
   }
 
   return (
@@ -302,7 +330,27 @@ export default function Home() {
                     {m.data && (
                       <div className="data-card">
                         <div className="dc-h"><strong>{m.data.title}</strong><div className="dc-actions"><button onClick={() => setEditingCardId(editingCardId === m.id ? null : m.id)}>{editingCardId === m.id ? 'Cancel' : 'Edit'}</button>{editingCardId === m.id && <button onClick={() => { setEditingCardId(null); setStatusTimed('Card saved'); }}>Save</button>}</div></div>
-                        {m.data.rows.map((r, i) => <div className="dc-row" key={`${m.id}-${r.label}`}><label>{r.label}</label>{r.multiline ? <textarea className={`dc-in ${editingCardId === m.id ? 'editing' : ''}`} value={r.value} rows={3} readOnly={editingCardId !== m.id} onChange={(e) => setMsgs((p) => p.map((x) => x.id === m.id && x.data ? ({ ...x, data: { ...x.data, rows: x.data.rows.map((rr, ri) => ri === i ? { ...rr, value: e.target.value } : rr) } }) : x))} /> : <input className={`dc-in ${editingCardId === m.id ? 'editing' : ''}`} value={r.value} readOnly={editingCardId !== m.id} onChange={(e) => setMsgs((p) => p.map((x) => x.id === m.id && x.data ? ({ ...x, data: { ...x.data, rows: x.data.rows.map((rr, ri) => ri === i ? { ...rr, value: e.target.value } : rr) } }) : x))} />}</div>)}
+                        {m.data.rows.map((r, i) => (
+                          <div className="dc-row" key={`${m.id}-${r.label}`}>
+                            <label>{r.label}</label>
+                            {r.multiline ? (
+                              <textarea
+                                className={`dc-in ${editingCardId === m.id ? 'editing' : ''}`}
+                                value={r.value}
+                                rows={3}
+                                readOnly={editingCardId !== m.id}
+                                onChange={(e) => updateCardValue(m.id, i, e.target.value)}
+                              />
+                            ) : (
+                              <input
+                                className={`dc-in ${editingCardId === m.id ? 'editing' : ''}`}
+                                value={r.value}
+                                readOnly={editingCardId !== m.id}
+                                onChange={(e) => updateCardValue(m.id, i, e.target.value)}
+                              />
+                            )}
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
@@ -363,7 +411,7 @@ export default function Home() {
           <div className="prov-grid">{([['anthropic', 'Anthropic', 'Claude models'], ['openai', 'OpenAI', 'GPT models'], ['gemini', 'Gemini', 'Google Gemini'], ['openrouter', 'OpenRouter', 'Multi-provider gateway']] as Array<[ProviderId, string, string]>).map(([id, label, desc]) => <button key={id} className={`prov ${draftKey.provider === id ? 'sel' : ''}`} onClick={() => setDraftKey((p) => ({ ...p, provider: id }))}><strong>{label}</strong><span>{desc}</span></button>)}</div>
           <label><span>API Key</span><input className="field" type="password" value={draftKey.key} onChange={(e) => setDraftKey((p) => ({ ...p, key: e.target.value }))} /></label>
           <label><span>Model Override</span><input className="field" value={draftKey.model} onChange={(e) => setDraftKey((p) => ({ ...p, model: e.target.value }))} /></label>
-          {draftKey.provider === 'openrouter' && <label><span>Base URL</span><input className="field" value={draftKey.baseUrl} onChange={(e) => setDraftKey((p) => ({ ...p, baseUrl: e.target.value }))} /></label>}
+          {draftKey.provider === 'openrouter' && <label><span>Base URL</span><input className="field" value={draftKey.baseUrl} placeholder="https://openrouter.ai/api/v1" onChange={(e) => setDraftKey((p) => ({ ...p, baseUrl: e.target.value }))} /></label>}
           <div className="modal-actions"><button className="soft-btn" onClick={() => { removeKey(); setKeyConfig(BASE_KEY); setDraftKey(BASE_KEY); setStatusTimed('API key cleared'); }}>Clear Key</button><div className="sp" /><button className="soft-btn" onClick={() => setShowModal(false)}>Cancel</button><button className="pill-btn" onClick={saveModal}>Save &amp; Close</button></div>
         </div>
       </div>
