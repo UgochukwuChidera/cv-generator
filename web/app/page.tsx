@@ -1,230 +1,372 @@
 'use client';
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { useNexusStore } from '@/lib/store';
-import { useRouter } from 'next/navigation';
-import { useDropzone } from 'react-dropzone';
 
-type Msg = { role: 'user' | 'ai'; text: string; id: number };
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-const STARTERS = [
-  { icon: '⚡', text: 'Software engineer, 6 yrs React & Node' },
-  { icon: '🎨', text: 'Product designer, B2B SaaS focus' },
-  { icon: '📊', text: 'Data analyst, Python & SQL specialist' },
-  { icon: '☁️', text: 'DevOps/cloud engineer, AWS certified' },
+type PageId = 'chat' | 'editor' | 'jd' | 'export' | 'changelog';
+type ProviderId = 'anthropic' | 'openai' | 'gemini' | 'openrouter';
+type SectionId = 'profile' | 'experience' | 'education' | 'skills' | 'projects' | 'cover';
+type Tone = 'Formal' | 'Technical' | 'Story';
+
+type KeyConfig = { provider: ProviderId; key: string; model: string; baseUrl: string };
+type DataCard = { title: string; rows: Array<{ label: string; value: string; multiline?: boolean }> };
+type Msg = { id: number; role: 'user' | 'ai'; text: string; data?: DataCard };
+type Particle = { x: number; y: number; w: number; h: number; vx: number; vy: number; r: number; vr: number; c: string };
+
+const COLS = ['rgba(255,77,106,.45)', 'rgba(107,159,255,.35)', 'rgba(77,217,148,.35)', 'rgba(255,204,85,.35)'];
+const CHIPS = [
+  'Create a concise product designer profile',
+  'Improve experience bullets for impact',
+  'Target this CV for a PM job description',
+  'Draft a technical cover letter opener',
 ];
+const SECTIONS: Array<{ id: SectionId; label: string }> = [
+  { id: 'profile', label: 'Profile' },
+  { id: 'experience', label: 'Experience' },
+  { id: 'education', label: 'Education' },
+  { id: 'skills', label: 'Skills' },
+  { id: 'projects', label: 'Projects' },
+  { id: 'cover', label: 'Cover Letter' },
+];
+const THEMES = ['Professional (ATS Safe)', 'Modern (Dark Mode)', 'Academic', 'Minimal', 'Creative'] as const;
+const FORMATS = ['PDF', 'DOCX', 'HTML', 'JSON', 'YAML'] as const;
 
-const PROVIDERS = [
-  { id: 'claude',      label: 'Claude',    prefix: 'sk-ant-' },
-  { id: 'openai',      label: 'OpenAI',    prefix: 'sk-' },
-  { id: 'gemini',      label: 'Gemini',    prefix: 'AIza' },
-  { id: 'openrouter',  label: 'OpenRouter', prefix: 'sk-or-' },
-] as const;
+const BASE_KEY: KeyConfig = { provider: 'openai', key: '', model: '', baseUrl: 'https://openrouter.ai/api/v1' };
 
-export default function Home() {
-  const { aiProvider, aiKey, aiModel, setMCS, setProvider } = useNexusStore();
-  const router = useRouter();
-  const [msgs, setMsgs] = useState<Msg[]>([{
-    role: 'ai', id: 0,
-    text: "Hi — I'm Nexus.\n\nTell me about your career: your experience, skills, and the roles you're targeting. Paste a resume, drop a file, or just describe yourself.\n\nI'll build your professional profile from there.",
-  }]);
-  const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [showProvider, setShowProvider] = useState(false);
-  const [localKey, setLocalKey] = useState(aiKey);
-  const [localModel, setLocalModel] = useState(aiModel);
-  const [localProvider, setLocalProvider] = useState(aiProvider);
-  const msgCount = useRef(1);
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+function autoR(el: HTMLTextAreaElement, max = 140) {
+  el.style.height = 'auto';
+  el.style.height = `${Math.min(el.scrollHeight, max)}px`;
+}
 
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [msgs, loading]);
-
-  const onDrop = useCallback((files: File[]) => {
-    const f = files[0]; if (!f) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const text = e.target?.result as string;
-      sendMessage(text, `📎 ${f.name} uploaded`);
-    };
-    reader.readAsText(f);
-  }, []);
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop, noClick: true,
-    accept: { 'text/*': ['.txt', '.md'], 'application/json': ['.json'], 'application/yaml': ['.yaml', '.yml'] },
-  });
-
-  function saveProvider() {
-    setProvider(localProvider, localKey, localModel);
-    setShowProvider(false);
-  }
-
-  async function sendMessage(rawText?: string, displayText?: string) {
-    const text = rawText ?? input.trim();
-    if (!text) return;
-    if (!aiKey) { setShowProvider(true); return; }
-
-    const id = msgCount.current++;
-    setMsgs(m => [...m, { role: 'user', id, text: displayText ?? text }]);
-    setInput('');
-    setLoading(true);
-
+function getStorage(): Storage | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    localStorage.setItem('__nexus', '1');
+    localStorage.removeItem('__nexus');
+    return localStorage;
+  } catch {
     try {
-      const res = await fetch('/api/ai/extract', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': aiKey },
-        body: JSON.stringify({ text, provider: aiProvider, model: aiModel }),
-      });
-      if (!res.ok) throw new Error(await res.text());
-      const mcs = await res.json();
-      setMCS(mcs);
-      const name = mcs.personal?.name;
-      const expCount = mcs.experience?.length ?? 0;
-      const skillCount = mcs.skills?.length ?? 0;
-      setMsgs(m => [...m, {
-        role: 'ai', id: msgCount.current++,
-        text: `Profile built${name ? ` for ${name}` : ''}.\n\n${expCount} experience ${expCount === 1 ? 'entry' : 'entries'} · ${skillCount} skills extracted · ready to refine.\n\nOpening your studio…`,
-      }]);
-      setTimeout(() => router.push('/editor'), 1600);
-    } catch (e) {
-      setMsgs(m => [...m, { role: 'ai', id: msgCount.current++, text: `Something went wrong. ${String(e)}\n\nCheck your API key is valid for the selected provider.` }]);
-    } finally {
-      setLoading(false);
+      sessionStorage.setItem('__nexus', '1');
+      sessionStorage.removeItem('__nexus');
+      return sessionStorage;
+    } catch {
+      return null;
     }
   }
+}
 
-  function handleKey(e: React.KeyboardEvent) {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+function loadKey(): KeyConfig | null {
+  const s = getStorage();
+  if (!s) return null;
+  const raw = s.getItem('nexus-key');
+  if (!raw) return null;
+  try {
+    const x = JSON.parse(raw) as Partial<KeyConfig>;
+    if (!x.key) return null;
+    return { provider: x.provider ?? 'openai', key: x.key, model: x.model ?? '', baseUrl: x.baseUrl ?? BASE_KEY.baseUrl };
+  } catch {
+    return null;
+  }
+}
+
+function storeKey(config: KeyConfig) {
+  const s = getStorage();
+  if (!s) return;
+  s.setItem('nexus-key', JSON.stringify(config));
+}
+
+function removeKey() {
+  const s = getStorage();
+  if (!s) return;
+  s.removeItem('nexus-key');
+}
+
+function mockReply(input: string): { text: string; data?: DataCard } {
+  const q = input.toLowerCase();
+  if (q.includes('cover')) {
+    return {
+      text: 'I drafted a concise cover letter structure with clear impact proof points.',
+      data: {
+        title: 'Extracted Data — click to edit',
+        rows: [
+          { label: 'Opening', value: 'I am excited to contribute product-led strategy and execution to your team.' },
+          { label: 'Proof', value: 'Led roadmap execution that increased activation by 24% in two quarters.' },
+          { label: 'Close', value: 'I would welcome the chance to discuss how I can drive similar impact.' },
+        ],
+      },
+    };
+  }
+  if (q.includes('bullet') || q.includes('jd')) {
+    return {
+      text: 'Here are stronger, keyword-aligned bullet options focused on outcomes.',
+      data: {
+        title: 'Extracted Data — click to edit',
+        rows: [
+          { label: 'Bullet 1', value: 'Redesigned onboarding, improving week-1 activation from 42% to 58%.' },
+          { label: 'Bullet 2', value: 'Partnered with engineering to ship instrumentation in 3 sprints.' },
+          { label: 'Keyword', value: 'Cross-functional leadership, experimentation, KPI ownership' },
+        ],
+      },
+    };
+  }
+  return {
+    text: 'I parsed your profile and generated an editable data card to refine before moving to Editor.',
+    data: {
+      title: 'Extracted Data — click to edit',
+      rows: [
+        { label: 'Name', value: 'Alex Rivera' },
+        { label: 'Title', value: 'Senior Product Designer' },
+        { label: 'Company', value: 'Nexus Systems' },
+        { label: 'Location', value: 'Remote, US' },
+        { label: 'Period', value: '2022 — Present' },
+        { label: 'Summary', multiline: true, value: 'Design leader focused on enterprise UX and measurable product outcomes.' },
+      ],
+    },
+  };
+}
+
+export default function Home() {
+  const [page, setPage] = useState<PageId>('chat');
+  const [status, setStatus] = useState('Ready');
+  const [showModal, setShowModal] = useState(false);
+  const [keyConfig, setKeyConfig] = useState<KeyConfig>(BASE_KEY);
+  const [draftKey, setDraftKey] = useState<KeyConfig>(BASE_KEY);
+
+  const [chatInput, setChatInput] = useState('');
+  const [typing, setTyping] = useState(false);
+  const [msgs, setMsgs] = useState<Msg[]>([]);
+  const [nextId, setNextId] = useState(1);
+  const [editingCardId, setEditingCardId] = useState<number | null>(null);
+
+  const [section, setSection] = useState<SectionId>('experience');
+  const [title, setTitle] = useState('Senior Product Designer');
+  const [company, setCompany] = useState('Nexus Systems');
+  const [location, setLocation] = useState('Remote, US');
+  const [period, setPeriod] = useState('Jan 2022 — Present');
+  const [bullets, setBullets] = useState([
+    'Led redesign of admin workflows, reducing task completion time by 31%.',
+    'Built and governed a cross-product design system with engineering partnership.',
+  ]);
+
+  const [jd, setJd] = useState('');
+  const [tone, setTone] = useState<Tone>('Formal');
+  const [theme, setTheme] = useState<typeof THEMES[number]>('Professional (ATS Safe)');
+  const [fmt, setFmt] = useState<typeof FORMATS[number]>('PDF');
+  const [zoom, setZoom] = useState(100);
+
+  const statusTimer = useRef<number | null>(null);
+  const chatRef = useRef<HTMLDivElement>(null);
+  const bgRef = useRef<HTMLCanvasElement>(null);
+  const hasKey = keyConfig.key.trim().length > 0;
+  const jdWords = useMemo(() => jd.trim().split(/\s+/).filter(Boolean).length, [jd]);
+
+  const setStatusTimed = useCallback((m: string) => {
+    setStatus(m);
+    if (statusTimer.current) window.clearTimeout(statusTimer.current);
+    statusTimer.current = window.setTimeout(() => setStatus('Ready'), 3000);
+  }, []);
+
+  useEffect(() => {
+    const k = loadKey();
+    if (k) {
+      setKeyConfig(k);
+      setDraftKey(k);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!chatRef.current) return;
+    chatRef.current.scrollTop = chatRef.current.scrollHeight;
+  }, [msgs, typing]);
+
+  useEffect(() => {
+    const esc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowModal(false);
+    };
+    window.addEventListener('keydown', esc);
+    return () => window.removeEventListener('keydown', esc);
+  }, []);
+
+  useEffect(() => {
+    const canvas = bgRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    let raf = 0;
+    let parts: Particle[] = [];
+
+    const resize = () => {
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.floor(window.innerWidth * dpr);
+      canvas.height = Math.floor(window.innerHeight * dpr);
+      canvas.style.width = `${window.innerWidth}px`;
+      canvas.style.height = `${window.innerHeight}px`;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const count = Math.max(36, Math.floor((window.innerWidth * window.innerHeight) / 9000));
+      parts = Array.from({ length: count }, () => ({
+        x: Math.random() * window.innerWidth,
+        y: Math.random() * window.innerHeight,
+        w: 3 + Math.random() * 11,
+        h: 2 + Math.random() * 7,
+        vx: (Math.random() - 0.5) * 0.22,
+        vy: (Math.random() - 0.5) * 0.22,
+        r: Math.random() * Math.PI,
+        vr: (Math.random() - 0.5) * 0.01,
+        c: COLS[Math.floor(Math.random() * COLS.length)] ?? COLS[0],
+      }));
+    };
+
+    const frame = () => {
+      ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+      for (const p of parts) {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.r += p.vr;
+        if (p.x > window.innerWidth + 20) p.x = -20;
+        if (p.x < -20) p.x = window.innerWidth + 20;
+        if (p.y > window.innerHeight + 20) p.y = -20;
+        if (p.y < -20) p.y = window.innerHeight + 20;
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.r);
+        ctx.fillStyle = p.c;
+        ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+        ctx.restore();
+      }
+      raf = window.requestAnimationFrame(frame);
+    };
+    resize();
+    frame();
+    window.addEventListener('resize', resize);
+    return () => {
+      window.cancelAnimationFrame(raf);
+      window.removeEventListener('resize', resize);
+    };
+  }, []);
+
+  function send(raw?: string) {
+    const text = (raw ?? chatInput).trim();
+    if (!text) return;
+    if (!hasKey) {
+      setDraftKey(keyConfig);
+      setShowModal(true);
+      return;
+    }
+    const id = nextId;
+    setNextId((v) => v + 2);
+    setMsgs((p) => [...p, { id, role: 'user', text }]);
+    setChatInput('');
+    setTyping(true);
+    window.setTimeout(() => {
+      const r = mockReply(text);
+      setMsgs((p) => [...p, { id: id + 1, role: 'ai', text: r.text, data: r.data }]);
+      setTyping(false);
+      setStatusTimed('Response ready');
+    }, 850);
   }
 
-  function autosize(e: React.ChangeEvent<HTMLTextAreaElement>) {
-    setInput(e.target.value);
-    const ta = e.target;
-    ta.style.height = 'auto';
-    ta.style.height = Math.min(ta.scrollHeight, 200) + 'px';
+  function saveModal() {
+    setKeyConfig(draftKey);
+    storeKey(draftKey);
+    setStatusTimed('API key saved');
+    setShowModal(false);
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }} {...getRootProps()}>
-      <input {...getInputProps()} />
-
-      {/* Ambient orbs */}
-      <div className="orb" style={{ width: 500, height: 500, top: '-15%', left: '25%' }} />
-      <div className="orb" style={{ width: 300, height: 300, bottom: '-10%', right: '30%', opacity: 0.10 }} />
-
-      {/* Drag overlay */}
-      {isDragActive && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(12,11,9,0.92)', backdropFilter: 'blur(12px)', gap: 12 }}>
-          <div style={{ fontSize: 48 }}>📄</div>
-          <p style={{ fontFamily: 'var(--font-display)', fontSize: 24, color: 'var(--text)' }}>Drop to extract</p>
-          <p className="caption">YAML · JSON · TXT · MD</p>
-        </div>
-      )}
-
-      {/* Logo */}
-      <div className="fade-up" style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 40 }}>
-        <div style={{ width: 34, height: 34, background: 'var(--gold)', borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>⬡</div>
-        <span className="display" style={{ fontSize: 22, fontWeight: 600, color: 'var(--text)' }}>Nexus</span>
-      </div>
-
-      {/* Chat window */}
-      <div className="fade-up fade-up-d1" style={{ width: '100%', maxWidth: 620, display: 'flex', flexDirection: 'column' }}>
-
-        {/* Messages */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12, paddingBottom: 8, minHeight: 180, maxHeight: '46vh', overflowY: 'auto' }}>
-          {msgs.map(msg => (
-            <div key={msg.id} style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
-              {msg.role === 'ai' && (
-                <div style={{ width: 26, height: 26, borderRadius: 'var(--r)', background: 'var(--gold-dim)', border: '1px solid var(--border-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, marginRight: 8, marginTop: 2, flexShrink: 0 }}>⬡</div>
-              )}
-              <div className={msg.role === 'user' ? 'bubble-user' : 'bubble-ai'} style={{ whiteSpace: 'pre-wrap' }}>{msg.text}</div>
-            </div>
-          ))}
-          {loading && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div style={{ width: 26, height: 26, borderRadius: 'var(--r)', background: 'var(--gold-dim)', border: '1px solid var(--border-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, flexShrink: 0 }}>⬡</div>
-              <div className="bubble-ai" style={{ display: 'flex', gap: 5, alignItems: 'center', padding: '12px 16px' }}>
-                <span className="typing-dot" />
-                <span className="typing-dot" />
-                <span className="typing-dot" />
-              </div>
-            </div>
-          )}
-          <div ref={bottomRef} />
-        </div>
-
-        {/* Input */}
-        <div className="card" style={{ marginTop: 12, padding: '10px 10px 10px 16px', display: 'flex', alignItems: 'flex-end', gap: 8 }}>
-          <textarea
-            ref={textareaRef}
-            value={input}
-            onChange={autosize}
-            onKeyDown={handleKey}
-            placeholder="Describe your career or paste resume text…"
-            rows={1}
-            style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', resize: 'none', fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--text)', lineHeight: 1.6, overflowY: 'hidden', maxHeight: 200 }}
-          />
-          <button onClick={() => sendMessage()} disabled={!input.trim() || loading}
-            className="btn btn-gold" style={{ padding: '8px 14px', borderRadius: 'var(--r)', fontSize: 13, flexShrink: 0 }}>
-            {loading ? <span className="spinner spinner-sm" /> : '↑'}
-          </button>
-        </div>
-
-        {/* Starters */}
-        <div className="fade-up fade-up-d2" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 12, justifyContent: 'center' }}>
-          {STARTERS.map((s, i) => (
-            <button key={i} onClick={() => setInput(s.text)}
-              style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 99, padding: '5px 12px', fontSize: 12, color: 'var(--text-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, transition: 'all 0.12s' }}
-              onMouseEnter={e => { (e.target as HTMLElement).closest('button')!.style.borderColor = 'var(--border-2)'; (e.target as HTMLElement).closest('button')!.style.color = 'var(--text)'; }}
-              onMouseLeave={e => { (e.target as HTMLElement).closest('button')!.style.borderColor = 'var(--border)'; (e.target as HTMLElement).closest('button')!.style.color = 'var(--text-2)'; }}>
-              <span>{s.icon}</span> {s.text}
-            </button>
-          ))}
-          <button onClick={() => setShowProvider(true)}
-            style={{ background: 'var(--gold-dim)', border: '1px solid rgba(255,77,109,0.28)', borderRadius: 99, padding: '5px 12px', fontSize: 12, color: 'var(--gold)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
-            🔑 {aiKey ? `${aiProvider} key set` : 'Set API key'}
-          </button>
-        </div>
-      </div>
-
-      {/* Provider modal */}
-      {showProvider && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(12,11,9,0.85)', backdropFilter: 'blur(8px)' }} onClick={() => setShowProvider(false)}>
-          <div className="card" style={{ width: 420, padding: 28 }} onClick={e => e.stopPropagation()}>
-            <p className="display" style={{ fontSize: 18, fontWeight: 600, marginBottom: 6, color: 'var(--text)' }}>AI provider</p>
-            <p className="caption" style={{ marginBottom: 20 }}>Your key lives in your browser only — never sent to our servers.</p>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
-              {PROVIDERS.map(p => (
-                <button key={p.id} onClick={() => setLocalProvider(p.id)}
-                  className="btn" style={{ justifyContent: 'center', background: localProvider === p.id ? 'var(--gold-dim)' : 'var(--surface-2)', border: `1px solid ${localProvider === p.id ? 'rgba(255,77,109,0.38)' : 'var(--border)'}`, color: localProvider === p.id ? 'var(--gold)' : 'var(--text-2)' }}>
-                  {p.label}
-                </button>
-              ))}
-            </div>
-
-            <input className="nx-input" value={localKey} onChange={e => setLocalKey(e.target.value)}
-              placeholder={`API key (${PROVIDERS.find(p => p.id === localProvider)?.prefix}…)`}
-              type="password" style={{ marginBottom: 10 }} />
-            <input className="nx-input" value={localModel} onChange={e => setLocalModel(e.target.value)}
-              placeholder="Model override (optional, e.g. gpt-4o)" style={{ marginBottom: 16 }} />
-
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button className="btn btn-ghost" onClick={() => setShowProvider(false)}>Cancel</button>
-              <button className="btn btn-gold" onClick={saveProvider}>Save</button>
-            </div>
+    <>
+      <canvas id="bg" ref={bgRef} />
+      <div className="app-shell">
+        <header className="nav">
+          <div className="brand"><span>NEXUS</span><i className="dot" /></div>
+          <div className="nav-tabs">
+            {(['chat', 'editor', 'jd', 'export', 'changelog'] as PageId[]).map((id) => (
+              <button key={id} className={`nb ${page === id ? 'on' : ''}`} onClick={() => setPage(id)}>{id}</button>
+            ))}
           </div>
-        </div>
-      )}
+          <div className="nav-right">
+            <span className="status-text">{status}</span>
+            <button className="key-btn" onClick={() => { setDraftKey(keyConfig); setShowModal(true); }}>
+              <span className={`kdot ${hasKey ? 'ok' : 'bad'}`} />Set API Key
+            </button>
+          </div>
+        </header>
 
-      {/* Skip */}
-      <div className="fade-up fade-up-d3" style={{ marginTop: 32 }}>
-        <button onClick={() => router.push('/editor')} style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 12, cursor: 'pointer' }}>
-          Skip — go straight to editor →
-        </button>
+        <main className="pages">
+          <section className={`pg ${page === 'chat' ? 'on' : ''}`}>
+            <div className="chat-scroll" ref={chatRef}><div className="chat-inner">
+              {msgs.length === 0 && <div className="chat-empty"><div className="brand-lg">NEXUS</div><p>Career intelligence for faster, sharper applications.</p><div className="chips">{CHIPS.map((c) => <button key={c} className="pc" onClick={() => send(c)}>{c}</button>)}</div></div>}
+              {msgs.map((m) => (
+                <div className={`msg ${m.role === 'user' ? 'u' : ''}`} key={m.id}>
+                  <div className="av">{m.role === 'user' ? 'U' : '✦'}</div>
+                  <div>
+                    <div className="bub">{m.text}</div>
+                    {m.data && (
+                      <div className="data-card">
+                        <div className="dc-h"><strong>{m.data.title}</strong><div className="dc-actions"><button onClick={() => setEditingCardId(editingCardId === m.id ? null : m.id)}>{editingCardId === m.id ? 'Cancel' : 'Edit'}</button>{editingCardId === m.id && <button onClick={() => { setEditingCardId(null); setStatusTimed('Card saved'); }}>Save</button>}</div></div>
+                        {m.data.rows.map((r, i) => <div className="dc-row" key={`${m.id}-${r.label}`}><label>{r.label}</label>{r.multiline ? <textarea className={`dc-in ${editingCardId === m.id ? 'editing' : ''}`} value={r.value} rows={3} readOnly={editingCardId !== m.id} onChange={(e) => setMsgs((p) => p.map((x) => x.id === m.id && x.data ? ({ ...x, data: { ...x.data, rows: x.data.rows.map((rr, ri) => ri === i ? { ...rr, value: e.target.value } : rr) } }) : x))} /> : <input className={`dc-in ${editingCardId === m.id ? 'editing' : ''}`} value={r.value} readOnly={editingCardId !== m.id} onChange={(e) => setMsgs((p) => p.map((x) => x.id === m.id && x.data ? ({ ...x, data: { ...x.data, rows: x.data.rows.map((rr, ri) => ri === i ? { ...rr, value: e.target.value } : rr) } }) : x))} />}</div>)}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {typing && <div className="msg"><div className="av">✦</div><div className="typing bub"><span className="td" /><span className="td" /><span className="td" /></div></div>}
+            </div></div>
+            <div className="chat-input-wrap"><div className="input-bar"><textarea id="chat-ta" value={chatInput} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }} onChange={(e) => { setChatInput(e.target.value); autoR(e.target); }} rows={1} placeholder="Tell Nexus about your profile, role target, or paste a JD..." /><button className="send" onClick={() => send()}>↑</button></div><div className="hint-row"><span>Enter to send · Shift+Enter for newline</span><span>{chatInput.length} chars</span></div></div>
+          </section>
+
+          <section className={`pg ${page === 'editor' ? 'on' : ''}`}>
+            <div className="ed-layout">
+              <aside className="sidebar"><div className="sl-wrap">{SECTIONS.map((s) => <button key={s.id} className={`sl ${section === s.id ? 'on' : ''}`} onClick={() => setSection(s.id)}>{s.label}</button>)}</div></aside>
+              <div className="ed-form">
+                <div className="ed-head"><h3>{SECTIONS.find((s) => s.id === section)?.label}</h3><button className="pill-btn" onClick={() => hasKey ? setStatusTimed('AI Improve requested') : setShowModal(true)}>AI Improve</button></div>
+                <div className="card-lo on-hi"><div className="grid4"><label><span>Job Title</span><input className="field" value={title} onChange={(e) => setTitle(e.target.value)} /></label><label><span>Company</span><input className="field" value={company} onChange={(e) => setCompany(e.target.value)} /></label><label><span>Location</span><input className="field" value={location} onChange={(e) => setLocation(e.target.value)} /></label><label><span>Dates</span><input className="field" value={period} onChange={(e) => setPeriod(e.target.value)} /></label></div>
+                  <div className="bullets-container">{bullets.map((b, i) => <div className="bullet-row2" key={i}><span className="bdot" /><textarea className="bullet-field" value={b} rows={2} onChange={(e) => setBullets((p) => p.map((x, xi) => xi === i ? e.target.value : x))} /><button className="ai-btn" onClick={() => hasKey ? setStatusTimed('AI bullet improve requested') : setShowModal(true)}>✦</button></div>)}</div>
+                  <button className="soft-btn" onClick={() => setBullets((p) => [...p, ''])}>+ Add bullet</button></div>
+                <button className="add-exp" onClick={() => setStatusTimed('Add experience entry is placeholder')}>+ Add experience entry</button>
+                <div className="card-lo old">Older entry (collapsed) — click to expand</div>
+              </div>
+              <aside className="ed-prev"><div className="ed-prev-h"><span>Live Preview</span><button className="soft-btn" onClick={() => setPage('export')}>Export</button></div><div className="cv-wrap"><article className="cv-page"><h1>Alex Rivera</h1><h2>{title}</h2><p>alex@rivera.dev · +1 555 123 0089 · {location}</p><section><h3>Experience</h3><div className="cv-role"><strong>{title}</strong><span>{period}</span></div><div className="cv-meta">{company} · {location}</div><ul><li>{bullets[0] || 'Add your first bullet.'}</li><li>Coached product squads on evidence-driven design decisions.</li></ul></section><section><h3>Education</h3><p>B.Sc. Human-Computer Interaction — University of Toronto</p></section><section><h3>Skills</h3><p>Design Systems · UX Research · Product Strategy · Figma · Analytics</p></section></article></div></aside>
+            </div>
+          </section>
+
+          <section className={`pg ${page === 'jd' ? 'on' : ''}`}>
+            <div className="jd-layout">
+              <div className="jd-left"><h3>JD Targeting</h3><p className="sub">Paste a role description to compare alignment and generate ATS-focused suggestions.</p><textarea className="field jd-field" rows={9} value={jd} onChange={(e) => setJd(e.target.value)} /><div className="hint-row"><span>{jdWords} words</span></div><div className="row-btns"><button className="soft-btn" onClick={() => { setJd(''); setStatusTimed('JD input cleared'); }}>Clear</button><button className="pill-btn" onClick={() => setStatusTimed('Alignment analysis complete (mock)')}>Analyze Alignment</button></div>
+                <div className="card-lo"><h4>Missing Keywords</h4><div className="tags">{['Roadmapping', 'B2B SaaS', 'A/B Testing'].map((t) => <span key={t} className="tag miss">{t}</span>)}</div></div>
+                <div className="card-lo"><h4>Strong Matches</h4><div className="tags">{['Design Systems', 'Cross-functional', 'Accessibility'].map((t) => <span key={t} className="tag ok">{t}</span>)}</div></div>
+                <div className="card-lo"><h4>Suggested Bullets</h4><div className="bc"><span className="badge">High Impact</span>Launched enterprise IA refresh, reducing support tickets by 27%.<span className="copy-h">click to copy</span></div><div className="bc"><span className="badge">High Impact</span>Drove workshops that shortened release review cycles by 19%.<span className="copy-h">click to copy</span></div><button className="soft-btn" onClick={() => setStatusTimed('Generated more suggestions (mock)')}>Generate More</button></div>
+              </div>
+              <aside className="jd-right"><div className="card-lo center"><svg width="140" height="140" viewBox="0 0 140 140" className="donut"><circle cx="70" cy="70" r="55" stroke="var(--t4)" strokeWidth="10" fill="none" /><circle cx="70" cy="70" r="55" stroke="var(--red)" strokeWidth="10" fill="none" strokeLinecap="round" strokeDasharray={345} strokeDashoffset={52} transform="rotate(-90 70 70)" /></svg><div className="fit">85%</div><div className="sub">Fit score</div><div className="stats3"><div><strong>92%</strong><span>Skills</span></div><div><strong>74%</strong><span>Exp</span></div><div><strong>100%</strong><span>Location</span></div></div></div><div className="card-lo"><h4>Competency Radar</h4><div className="radar-row"><span>Visual Precision</span><i style={{ width: '95%' }} /></div><div className="radar-row gap"><span>Project Mgmt</span><i style={{ width: '58%' }} /></div><div className="radar-row gap"><span>Enterprise UX</span><i style={{ width: '42%' }} /></div></div><div className="card-lo"><h4>Cover Letter</h4><div className="tone-row">{(['Formal', 'Technical', 'Story'] as Tone[]).map((t) => <button key={t} className={`tone ${tone === t ? 'on' : ''}`} onClick={() => setTone(t)}>{t}</button>)}</div><button className="pill-btn" onClick={() => setStatusTimed(`Generate ${tone} letter (mock)`)}>Generate</button></div></aside>
+            </div>
+          </section>
+
+          <section className={`pg ${page === 'export' ? 'on' : ''}`}>
+            <div className="ex-layout">
+              <aside className="ex-left"><h4>Visual Theme</h4><div className="theme-list">{THEMES.map((t) => <button key={t} className={`tb ${theme === t ? 'sel' : ''}`} onClick={() => setTheme(t)}><span className="ts" /><span>{t}</span></button>)}</div><h4>Format</h4><div className="fmt-list">{FORMATS.map((f) => <label key={f} className="fmt-label"><input type="radio" name="fmt" checked={fmt === f} onChange={() => setFmt(f)} /><span>{f}</span></label>)}</div></aside>
+              <div className="ex-mid"><div className="ex-cv" style={{ transform: `scale(${zoom / 100})` }}><h2>Alex Rivera</h2><p>Senior Product Designer · alex@rivera.dev · Remote</p><hr /><h5>Experience</h5><p><strong>Senior Product Designer</strong> — Nexus Systems</p><ul><li>Increased workflow completion by 31% through UX architecture improvements.</li><li>Scaled design operations across 4 squads with a unified token system.</li></ul><h5>Expertise</h5><div className="x-tags"><span>Design Systems</span><span>Enterprise UX</span><span>Product Strategy</span></div></div><div className="zoom-row"><button onClick={() => setZoom((z) => Math.max(70, z - 10))}>-</button><span>1 / 1</span><button onClick={() => setZoom((z) => Math.min(130, z + 10))}>+</button></div></div>
+              <aside className="ex-right"><div className="card-lo"><h4>Export</h4><p>Theme: {theme}</p><p>Format: {fmt}</p><p>Estimated size: 112 KB</p><button className="pill-btn" onClick={() => setStatusTimed('Download is mock-only')}>Download Now</button><button className="soft-btn" onClick={() => setStatusTimed('Share is mock-only')}>Share Link</button><button className="soft-btn" onClick={() => setStatusTimed('LinkedIn upload is mock-only')}>Upload to LinkedIn</button></div><div className="card-lo tiny"><strong>ATS Ready</strong><span>Structure validated</span></div><div className="card-lo tiny"><strong>Print Safe</strong><span>Margins and contrast good</span></div><p className="sub">API key is only used for AI calls. Export runs locally.</p></aside>
+            </div>
+          </section>
+
+          <section className={`pg ${page === 'changelog' ? 'on' : ''}`}>
+            <div className="cl-wrap">
+              {[{ v: 'v1.2.0', d: '2026-04-10', m: true, i: ['Unified shell with chat/editor/jd/export/changelog views.', 'Added key modal and provider switching.', 'Added animated particle background and interaction polish.'] }, { v: 'v1.1.4', d: '2026-03-28', m: false, i: ['Improved JD suggestion cards.', 'Refined export theme selector.'] }, { v: 'v1.1.0', d: '2026-03-10', m: false, i: ['State stability updates.', 'Minor UI consistency fixes.'] }].map((e) => <div className="tl" key={e.v}><div className="tl-l"><strong>{e.v}</strong><span>{e.d}</span></div><div className={`tl-b ${e.m ? 'major' : ''}`}><div className="badges"><span>Feature</span><span>Fix</span><span>Stability</span></div><ol>{e.i.map((x) => <li className="cl-step" key={x}>{x}</li>)}</ol></div></div>)}
+            </div>
+          </section>
+        </main>
       </div>
-    </div>
+
+      <div className={`modal-bg ${showModal ? 'open' : ''}`} onClick={() => setShowModal(false)}>
+        <div className="modal" onClick={(e) => e.stopPropagation()}>
+          <button className="modal-x" onClick={() => setShowModal(false)}>×</button>
+          <h3>Set API Key</h3>
+          <p className="sub">Key stays local in browser storage.</p>
+          <div className="prov-grid">{([['anthropic', 'Anthropic', 'Claude models'], ['openai', 'OpenAI', 'GPT models'], ['gemini', 'Gemini', 'Google Gemini'], ['openrouter', 'OpenRouter', 'Multi-provider gateway']] as Array<[ProviderId, string, string]>).map(([id, label, desc]) => <button key={id} className={`prov ${draftKey.provider === id ? 'sel' : ''}`} onClick={() => setDraftKey((p) => ({ ...p, provider: id }))}><strong>{label}</strong><span>{desc}</span></button>)}</div>
+          <label><span>API Key</span><input className="field" type="password" value={draftKey.key} onChange={(e) => setDraftKey((p) => ({ ...p, key: e.target.value }))} /></label>
+          <label><span>Model Override</span><input className="field" value={draftKey.model} onChange={(e) => setDraftKey((p) => ({ ...p, model: e.target.value }))} /></label>
+          {draftKey.provider === 'openrouter' && <label><span>Base URL</span><input className="field" value={draftKey.baseUrl} onChange={(e) => setDraftKey((p) => ({ ...p, baseUrl: e.target.value }))} /></label>}
+          <div className="modal-actions"><button className="soft-btn" onClick={() => { removeKey(); setKeyConfig(BASE_KEY); setDraftKey(BASE_KEY); setStatusTimed('API key cleared'); }}>Clear Key</button><div className="sp" /><button className="soft-btn" onClick={() => setShowModal(false)}>Cancel</button><button className="pill-btn" onClick={saveModal}>Save &amp; Close</button></div>
+        </div>
+      </div>
+    </>
   );
 }
