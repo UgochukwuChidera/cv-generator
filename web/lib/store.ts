@@ -10,6 +10,7 @@ export type JDAnalysis = {
   implicitSkills: string[];
   bulletSuggestions: string[];
   coverLetter: string;
+  jdText?: string;
 };
 
 interface NexusStore {

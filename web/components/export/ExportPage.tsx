@@ -6,6 +6,7 @@ import { useShell } from '@/components/layout/ShellContext';
 import ThemePicker, { type ExportTheme } from './ThemePicker';
 import FormatPicker, { type ExportFormat } from './FormatPicker';
 import CVPreview, { NO_COVER_LETTER_MESSAGE } from './CVPreview';
+type Tone = 'formal' | 'technical' | 'storytelling';
 
 function downloadBlob(content: Blob, filename: string) {
   const url = URL.createObjectURL(content);
@@ -27,21 +28,57 @@ async function fetchAndDownload(url: string, body: unknown, filename: string) {
 }
 
 export default function ExportPage() {
-  const { mcs, jdAnalysis } = useNexusStore();
-  const { setStatus } = useShell();
+  const { mcs, jdAnalysis, saveCoverLetter, aiKey, aiProvider, aiModel } = useNexusStore();
+  const { setStatus, openApiKeyModal } = useShell();
   const [theme, setTheme] = useState<ExportTheme>('Professional');
   const [format, setFormat] = useState<ExportFormat>('PDF');
   const [documentType, setDocumentType] = useState<'resume' | 'cv' | 'cover-letter'>('resume');
+  const [tone, setTone] = useState<Tone>('formal');
   const [accent, setAccent] = useState('#ff4d6a');
   const [fontFamily, setFontFamily] = useState(`'JetBrains Mono', Consolas, monospace`);
   const [zoom, setZoom] = useState(100);
   const [loading, setLoading] = useState(false);
+  const [coverLoading, setCoverLoading] = useState(false);
 
   const coverLetterCount = useMemo(() => Object.keys(mcs?.coverLetters ?? {}).length, [mcs?.coverLetters]);
   const latestCoverLetter = useMemo(() => {
     const values = Object.values(mcs?.coverLetters ?? {});
     return values.length > 0 ? (values[values.length - 1]?.content ?? '') : (jdAnalysis?.coverLetter ?? '');
   }, [jdAnalysis?.coverLetter, mcs?.coverLetters]);
+
+  async function onGenerateCover() {
+    if (!mcs || !jdAnalysis?.jdText?.trim()) {
+      setStatus('Analyze a job description in JD Targeting first to generate cover letters.');
+      return;
+    }
+    if (!aiKey) {
+      openApiKeyModal();
+      return;
+    }
+    setCoverLoading(true);
+    try {
+      const res = await fetch('/api/ai/generate-cover', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': aiKey,
+          'x-provider': aiProvider,
+        },
+        body: JSON.stringify({ mcs, jd: jdAnalysis.jdText, tone, provider: aiProvider, model: aiModel }),
+      });
+      const data = (await res.json()) as { ok: boolean; error?: string; coverLetter?: string };
+      if (!res.ok || !data.ok) throw new Error(data.error || 'Cover generation failed');
+
+      const generatedCover = data.coverLetter?.trim() ?? '';
+      if (!generatedCover) throw new Error('Model returned an empty cover letter');
+      saveCoverLetter(`cover-${Date.now()}`, generatedCover);
+      setStatus('Cover letter generated in Export');
+    } catch {
+      setStatus('Cover generation failed');
+    } finally {
+      setCoverLoading(false);
+    }
+  }
 
   async function onDownload() {
     if (!mcs) return;
@@ -58,12 +95,12 @@ export default function ExportPage() {
         return;
       }
       if (format === 'PDF') {
-        await fetchAndDownload('/api/generate/pdf', { mcs, theme }, 'resume.pdf');
+        await fetchAndDownload('/api/generate/pdf', { mcs, theme, documentType }, 'resume.pdf');
       } else if (format === 'DOCX') {
-        await fetchAndDownload('/api/generate/docx', { mcs, theme }, 'resume.docx');
+        await fetchAndDownload('/api/generate/docx', { mcs, theme, documentType }, 'resume.docx');
       } else {
         const ext = format.toLowerCase();
-        await fetchAndDownload('/api/generate/export', { mcs, theme, format }, `resume.${ext}`);
+        await fetchAndDownload('/api/generate/export', { mcs, theme, format, documentType }, `resume.${ext}`);
       }
       setStatus(`Prepared ${documentType.toUpperCase()} ${format} export`);
     } catch {
@@ -108,6 +145,19 @@ export default function ExportPage() {
         </div>
         <h4>Format</h4>
         <FormatPicker value={format} onChange={setFormat} />
+        <div className="card-lo">
+          <h4>Cover Letter Studio</h4>
+          <div className="tone-row">
+            {(['formal', 'technical', 'storytelling'] as Tone[]).map((item) => (
+              <button key={item} className={`tone ${tone === item ? 'on' : ''}`} onClick={() => setTone(item)}>
+                {item}
+              </button>
+            ))}
+          </div>
+          <button className="btn-primary" onClick={onGenerateCover} disabled={coverLoading || !mcs}>
+            {coverLoading ? 'Generating...' : 'Generate Cover Letter'}
+          </button>
+        </div>
       </aside>
 
       <div className="ex-mid">
