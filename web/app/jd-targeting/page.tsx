@@ -141,7 +141,7 @@ export default function JDTargetingPage() {
           </div>
 
           {noKey && (
-            <div style={{ padding: '10px 14px', background: 'rgba(232,184,75,0.08)', border: '1px solid rgba(232,184,75,0.2)', borderRadius: 'var(--r)', fontSize: 13, color: 'var(--gold)' }}>
+            <div style={{ padding: '10px 14px', background: 'rgba(255,77,109,0.10)', border: '1px solid rgba(255,77,109,0.24)', borderRadius: 'var(--r)', fontSize: 13, color: 'var(--gold)' }}>
               ⚡ Set your AI key on the <Link href="/" style={{ color: 'var(--gold)', fontWeight: 600 }}>home page</Link> first.
             </div>
           )}
@@ -181,7 +181,7 @@ export default function JDTargetingPage() {
             <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--border)', display: 'flex', gap: 6 }}>
               {TONES.map(t => (
                 <button key={t.id} onClick={() => setTone(t.id)}
-                  style={{ flex: 1, padding: '6px 0', borderRadius: 'var(--r)', background: tone === t.id ? 'var(--gold-dim)' : 'var(--surface-2)', border: `1px solid ${tone === t.id ? 'rgba(232,184,75,0.35)' : 'var(--border)'}`, color: tone === t.id ? 'var(--gold)' : 'var(--text-3)', fontSize: 11, cursor: 'pointer', fontWeight: tone === t.id ? 600 : 400 }}>
+                  style={{ flex: 1, padding: '6px 0', borderRadius: 'var(--r)', background: tone === t.id ? 'var(--gold-dim)' : 'var(--surface-2)', border: `1px solid ${tone === t.id ? 'rgba(255,77,109,0.38)' : 'var(--border)'}`, color: tone === t.id ? 'var(--gold)' : 'var(--text-3)', fontSize: 11, cursor: 'pointer', fontWeight: tone === t.id ? 600 : 400 }}>
                   {t.label}
                 </button>
               ))}

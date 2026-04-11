@@ -183,7 +183,7 @@ export default function Home() {
             </button>
           ))}
           <button onClick={() => setShowProvider(true)}
-            style={{ background: 'var(--gold-dim)', border: '1px solid rgba(232,184,75,0.25)', borderRadius: 99, padding: '5px 12px', fontSize: 12, color: 'var(--gold)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+            style={{ background: 'var(--gold-dim)', border: '1px solid rgba(255,77,109,0.28)', borderRadius: 99, padding: '5px 12px', fontSize: 12, color: 'var(--gold)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
             🔑 {aiKey ? `${aiProvider} key set` : 'Set API key'}
           </button>
         </div>
@@ -199,7 +199,7 @@ export default function Home() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
               {PROVIDERS.map(p => (
                 <button key={p.id} onClick={() => setLocalProvider(p.id)}
-                  className="btn" style={{ justifyContent: 'center', background: localProvider === p.id ? 'var(--gold-dim)' : 'var(--surface-2)', border: `1px solid ${localProvider === p.id ? 'rgba(232,184,75,0.35)' : 'var(--border)'}`, color: localProvider === p.id ? 'var(--gold)' : 'var(--text-2)' }}>
+                  className="btn" style={{ justifyContent: 'center', background: localProvider === p.id ? 'var(--gold-dim)' : 'var(--surface-2)', border: `1px solid ${localProvider === p.id ? 'rgba(255,77,109,0.38)' : 'var(--border)'}`, color: localProvider === p.id ? 'var(--gold)' : 'var(--text-2)' }}>
                   {p.label}
                 </button>
               ))}

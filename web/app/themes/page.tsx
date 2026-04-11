@@ -127,7 +127,7 @@ export default function ThemesPage() {
                 <div style={{ padding: '0 10px 10px', display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                     <p style={{ fontSize: 12, fontWeight: 600, color: selected === t.id ? 'var(--gold)' : 'var(--text)' }}>{t.label}</p>
-                    {t.tag && <span style={{ fontSize: 9, background: 'var(--gold-dim)', color: 'var(--gold)', border: '1px solid rgba(232,184,75,0.25)', borderRadius: 99, padding: '1px 5px', fontWeight: 600 }}>{t.tag}</span>}
+                    {t.tag && <span style={{ fontSize: 9, background: 'var(--gold-dim)', color: 'var(--gold)', border: '1px solid rgba(255,77,109,0.28)', borderRadius: 99, padding: '1px 5px', fontWeight: 600 }}>{t.tag}</span>}
                   </div>
                   <p style={{ fontSize: 11, color: 'var(--text-3)' }}>{t.desc}</p>
                 </div>

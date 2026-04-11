@@ -122,3 +122,21 @@ Return ONLY valid JSON.`;
   );
   return JSON.parse(raw.replace(/```json\n?|\n?```/g, '').trim());
 }
+
+export async function generateCoverLetter(
+  config: AIConfig,
+  mcs: object,
+  jd: string,
+  tone: 'formal' | 'conversational' | 'technical' | 'storytelling' = 'formal'
+): Promise<string> {
+  const systemPrompt = `You are an expert resume writer.
+Write a concise cover letter tailored to the job description and candidate profile.
+Tone: ${tone}.
+Return plain text only. No markdown, no JSON, no code fences.`;
+  const raw = await callAI(
+    config,
+    systemPrompt,
+    `Candidate profile: ${JSON.stringify(mcs)}\n\nJob Description: ${jd}`
+  );
+  return raw.replace(/```[a-zA-Z]*\n?|\n?```/g, '').trim();
+}

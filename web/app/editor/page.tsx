@@ -162,7 +162,7 @@ function ExperienceTab() {
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                             <button
                               onClick={() => improveBullet(i, bi, b)} disabled={!b.trim() || improving === key}
-                              title="AI improve" style={{ width: 26, height: 26, borderRadius: 'var(--r-sm)', background: 'var(--gold-dim)', border: '1px solid rgba(232,184,75,0.2)', color: 'var(--gold)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>
+                              title="AI improve" style={{ width: 26, height: 26, borderRadius: 'var(--r-sm)', background: 'var(--gold-dim)', border: '1px solid rgba(255,77,109,0.24)', color: 'var(--gold)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>
                               {improving === key ? <span className="spinner spinner-sm" style={{ width: 10, height: 10, borderWidth: 1.5 }} /> : '✦'}
                             </button>
                             <button
