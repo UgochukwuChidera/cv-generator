@@ -7,22 +7,65 @@ function autoResize(el: HTMLTextAreaElement) {
   el.style.height = `${Math.min(el.scrollHeight, 140)}px`;
 }
 
+export type UploadedFilePayload = {
+  name: string;
+  mimeType?: string;
+  base64: string;
+};
+
+async function toPayload(file: File): Promise<UploadedFilePayload> {
+  const buffer = await file.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += 1) binary += String.fromCharCode(bytes[i]);
+  return {
+    name: file.name,
+    mimeType: file.type,
+    base64: btoa(binary),
+  };
+}
+
 export default function InputBar({
   value,
   disabled,
   onChange,
   onSend,
+  onUpload,
 }: {
   value: string;
   disabled?: boolean;
   onChange: (v: string) => void;
   onSend: () => void;
+  onUpload?: (file: UploadedFilePayload) => void;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   return (
     <div className="chat-input-wrap">
       <div className="input-bar">
+        <button
+          className="btn-ghost"
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          title="Upload resume file"
+        >
+          + File
+        </button>
+
+        <input
+          ref={fileRef}
+          hidden
+          type="file"
+          accept=".txt,.pdf,.docx,.json,.yaml,.yml"
+          onChange={async (e) => {
+            const file = e.target.files?.[0];
+            if (!file || !onUpload) return;
+            onUpload(await toPayload(file));
+            e.currentTarget.value = '';
+          }}
+        />
+
         <textarea
           id="chat-ta"
           ref={ref}
@@ -45,7 +88,7 @@ export default function InputBar({
         </button>
       </div>
       <div className="hint-row">
-        <span>Enter to send · Shift+Enter for newline</span>
+        <span>Upload TXT/PDF/DOCX/JSON/YAML · Enter to send · Shift+Enter newline</span>
         <span>{value.length} chars</span>
       </div>
     </div>

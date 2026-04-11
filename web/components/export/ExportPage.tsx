@@ -1,15 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNexusStore } from '@/lib/store';
 import { useShell } from '@/components/layout/ShellContext';
 import ThemePicker, { type ExportTheme } from './ThemePicker';
 import FormatPicker, { type ExportFormat } from './FormatPicker';
 import CVPreview from './CVPreview';
 
-function downloadBlob(content: string | Blob, filename: string, mime?: string) {
-  const blob = content instanceof Blob ? content : new Blob([content], { type: mime ?? 'text/plain' });
-  const url = URL.createObjectURL(blob);
+function downloadBlob(content: Blob, filename: string) {
+  const url = URL.createObjectURL(content);
   const a = document.createElement('a');
   a.href = url;
   a.download = filename;
@@ -17,37 +16,37 @@ function downloadBlob(content: string | Blob, filename: string, mime?: string) {
   URL.revokeObjectURL(url);
 }
 
+async function fetchAndDownload(url: string, body: unknown, filename: string) {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  downloadBlob(await res.blob(), filename);
+}
+
 export default function ExportPage() {
-  const { mcs } = useNexusStore();
+  const { mcs, jdAnalysis } = useNexusStore();
   const { setStatus } = useShell();
   const [theme, setTheme] = useState<ExportTheme>('Professional');
   const [format, setFormat] = useState<ExportFormat>('PDF');
   const [zoom, setZoom] = useState(100);
   const [loading, setLoading] = useState(false);
 
+  const coverLetterCount = useMemo(() => Object.keys(mcs?.coverLetters ?? {}).length, [mcs?.coverLetters]);
+
   async function onDownload() {
     if (!mcs) return;
     setLoading(true);
     try {
       if (format === 'PDF') {
-        const param = encodeURIComponent(JSON.stringify(mcs));
-        window.open(`/api/generate/preview?mcs=${param}`, '_blank', 'noopener,noreferrer');
+        await fetchAndDownload('/api/generate/pdf', { mcs, theme }, 'resume.pdf');
       } else if (format === 'DOCX') {
-        const res = await fetch('/api/generate/docx', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ mcs }),
-        });
-        if (!res.ok) throw new Error(await res.text());
-        const blob = await res.blob();
-        downloadBlob(blob, 'resume.docx');
-      } else if (format === 'HTML') {
-        downloadBlob(`<!DOCTYPE html><html><body><pre>${JSON.stringify(mcs, null, 2)}</pre></body></html>`, 'resume.html', 'text/html');
-      } else if (format === 'JSON') {
-        downloadBlob(JSON.stringify(mcs, null, 2), 'resume.json', 'application/json');
+        await fetchAndDownload('/api/generate/docx', { mcs, theme }, 'resume.docx');
       } else {
-        const yaml = await import('js-yaml');
-        downloadBlob(yaml.dump(mcs), 'resume.yaml', 'application/x-yaml');
+        const ext = format.toLowerCase();
+        await fetchAndDownload('/api/generate/export', { mcs, theme, format }, `resume.${ext}`);
       }
       setStatus(`Prepared ${format} export`);
     } catch {
@@ -84,13 +83,18 @@ export default function ExportPage() {
           <h4>Export Summary</h4>
           <p>Theme: {theme}</p>
           <p>Format: {format}</p>
-          <p>Estimated size: 112 KB</p>
+          <p>Generated cover letters: {coverLetterCount}</p>
+          <p>Latest fit score: {jdAnalysis?.score ?? 0}%</p>
           <button className="btn-primary" onClick={onDownload} disabled={!mcs || loading}>{loading ? 'Preparing...' : '↓ Download Now'}</button>
-          <button className="btn-ghost" onClick={() => setStatus('Share link not yet implemented')}>↗ Share Link</button>
-          <button className="btn-ghost" onClick={() => setStatus('LinkedIn upload not yet implemented')}>↑ Upload to LinkedIn</button>
+          <button
+            className="btn-ghost"
+            onClick={() => setStatus(coverLetterCount ? 'Cover letters are stored in profile and included in JSON/YAML.' : 'Generate a cover letter in JD Targeting first.')}
+          >
+            Cover Letters
+          </button>
         </div>
-        <div className="card-lo tiny"><strong>ATS Ready</strong><span>Structure validated</span></div>
-        <div className="card-lo tiny"><strong>Print Safe</strong><span>Margins and contrast checked</span></div>
+        <div className="card-lo tiny"><strong>ATS Ready</strong><span>Schema-validated export payload</span></div>
+        <div className="card-lo tiny"><strong>Deliverables</strong><span>CV + cover letters are persisted in profile history</span></div>
       </aside>
     </div>
   );

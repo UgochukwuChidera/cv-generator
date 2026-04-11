@@ -3,9 +3,10 @@
 import { useEffect, useMemo, useState } from 'react';
 
 export default function ScoreRing({ score }: { score: number }) {
+  const clamped = Math.max(0, Math.min(100, Math.round(score)));
   const r = 55;
   const circumference = 2 * Math.PI * r;
-  const targetOffset = useMemo(() => circumference - (score / 100) * circumference, [score, circumference]);
+  const targetOffset = useMemo(() => circumference - (clamped / 100) * circumference, [clamped, circumference]);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -31,7 +32,7 @@ export default function ScoreRing({ score }: { score: number }) {
           style={{ transition: 'stroke-dashoffset 1.2s cubic-bezier(0.34, 1.56, 0.64, 1)', filter: 'drop-shadow(0 0 5px rgba(255,77,106,0.4))' }}
         />
       </svg>
-      <div className="fit">{score}%</div>
+      <div className="fit">{clamped}%</div>
     </div>
   );
 }
