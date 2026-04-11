@@ -44,7 +44,7 @@ export default function TopBar() {
         return;
       }
 
-      if (event.shiftKey && event.key === '?') {
+      if (event.shiftKey && event.code === 'Slash') {
         event.preventDefault();
         setShowHelp((prev) => !prev);
         return;
@@ -76,6 +76,11 @@ export default function TopBar() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [router]);
 
+  function closeOverlays() {
+    setShowHelp(false);
+    setShowPalette(false);
+  }
+
   return (
     <>
       <header className="nav">
@@ -106,10 +111,7 @@ export default function TopBar() {
         </div>
       </header>
 
-      {(showPalette || showHelp) && <div className="overlay-backdrop" onClick={() => {
-        setShowHelp(false);
-        setShowPalette(false);
-      }} />}
+      {(showPalette || showHelp) && <div className="overlay-backdrop" onClick={closeOverlays} />}
 
       {showPalette && (
         <div className="overlay-panel cmd-palette" role="dialog" aria-modal>

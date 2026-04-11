@@ -159,8 +159,8 @@ export default function JDPage() {
       if (!text) throw new Error('No readable text found in file');
       setJd(text);
       setStatus(`Loaded JD from ${file.name}`);
-    } catch {
-      setStatus('JD file upload failed');
+    } catch (error) {
+      setStatus(`JD file upload failed: ${error instanceof Error ? error.message : 'unknown error'}`);
     } finally {
       setLoading(false);
     }

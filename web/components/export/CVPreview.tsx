@@ -4,6 +4,7 @@ import type { MCS } from '@nexus/schema';
 import type { ExportTheme } from './ThemePicker';
 
 type DocumentType = 'resume' | 'cv' | 'cover-letter';
+export const NO_COVER_LETTER_MESSAGE = 'No cover letter generated yet. Use JD Targeting to generate one.';
 
 export default function CVPreview({
   mcs,
@@ -40,7 +41,7 @@ export default function CVPreview({
         <h2 style={{ color: accent }}>Cover Letter</h2>
         <p>{mcs.personal?.name || 'Candidate'}</p>
         <hr />
-        <pre className="cover-preview">{coverLetter || 'No cover letter generated yet. Use JD Targeting to generate one.'}</pre>
+        <pre className="cover-preview">{coverLetter || NO_COVER_LETTER_MESSAGE}</pre>
       </div>
     );
   }

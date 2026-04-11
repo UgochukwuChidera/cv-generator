@@ -20,6 +20,8 @@ const EMPTY_MCS: MCS = normalizeMCS({
   meta: { version: 1, updated_at: new Date().toISOString() },
   history: [],
 });
+const PREVIEW_DEBOUNCE_MS = 90;
+const PERSISTENCE_DEBOUNCE_MS = 220;
 
 function Label({ title }: { title: string }) {
   return <span style={{ display: 'block', marginBottom: 5, fontSize: 10, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--t3)' }}>{title}</span>;
@@ -43,7 +45,7 @@ export default function EditorPage() {
   }, [mcs, setMCS]);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setPreviewMcs(current), 90);
+    const timer = window.setTimeout(() => setPreviewMcs(current), PREVIEW_DEBOUNCE_MS);
     return () => window.clearTimeout(timer);
   }, [current]);
 
@@ -52,7 +54,7 @@ export default function EditorPage() {
       hasHydrated.current = true;
       return;
     }
-    const timer = window.setTimeout(() => setMCS(normalizeMCS(current)), 220);
+    const timer = window.setTimeout(() => setMCS(normalizeMCS(current)), PERSISTENCE_DEBOUNCE_MS);
     return () => window.clearTimeout(timer);
   }, [current, setMCS]);
 

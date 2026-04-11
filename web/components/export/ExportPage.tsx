@@ -5,7 +5,7 @@ import { useNexusStore } from '@/lib/store';
 import { useShell } from '@/components/layout/ShellContext';
 import ThemePicker, { type ExportTheme } from './ThemePicker';
 import FormatPicker, { type ExportFormat } from './FormatPicker';
-import CVPreview from './CVPreview';
+import CVPreview, { NO_COVER_LETTER_MESSAGE } from './CVPreview';
 
 function downloadBlob(content: Blob, filename: string) {
   const url = URL.createObjectURL(content);
@@ -49,7 +49,7 @@ export default function ExportPage() {
     try {
       if (documentType === 'cover-letter') {
         if (!latestCoverLetter.trim()) {
-          setStatus('Generate a cover letter first in JD Targeting');
+          setStatus(NO_COVER_LETTER_MESSAGE);
           return;
         }
         const ext = format.toLowerCase();
