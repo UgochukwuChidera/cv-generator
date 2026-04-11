@@ -118,7 +118,7 @@ function ExperienceTab() {
           <div className="entry-header" onClick={() => setOpen(open === i ? null : i)}>
             <div style={{ width: 6, height: 6, borderRadius: '50%', background: open === i ? 'var(--gold)' : 'var(--text-3)', flexShrink: 0, marginTop: 1 }} />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', truncate: true, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {exp.role || 'New role'}{exp.company ? ` · ${exp.company}` : ''}
               </p>
               <p style={{ fontSize: 11, color: 'var(--text-3)' }}>
@@ -299,11 +299,11 @@ function RawTab() {
     <div>
       {err && <p style={{ fontSize: 12, color: 'var(--red)', marginBottom: 6 }}>{err}</p>}
       <textarea
-        value={raw} onChange={e => setRaw(e.target.value)} onBlur={handleBlur}
+        value={raw} onChange={e => setRaw(e.target.value)}
+        onBlur={e => { handleBlur(); e.target.style.borderColor = 'var(--border)'; }}
         rows={30}
         style={{ width: '100%', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '12px', fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-2)', outline: 'none', resize: 'none', lineHeight: 1.7 }}
         onFocus={e => (e.target.style.borderColor = 'var(--gold)')}
-        onBlur2={e => (e.target.style.borderColor = 'var(--border)')}
       />
     </div>
   );
