@@ -134,6 +134,17 @@ export function normalizeMCS(input: unknown): MCS {
   return MCSSchema.parse(normalized);
 }
 
+
+const DEFAULT_EXPERIENCE = {
+  company: '',
+  role: '',
+  startDate: '',
+  endDate: '',
+  current: false,
+  location: '',
+  bullets: [] as string[],
+};
+
 const REQUIRED: Record<MissingField['section'], Array<{ path: string; label: string }>> = {
   personal: [
     { path: 'personal.name', label: 'Full name' },
@@ -168,6 +179,10 @@ function getByPath(mcs: MCS, path: string): unknown {
 function present(value: unknown): boolean {
   if (Array.isArray(value)) return value.filter((v) => cleanText(v)).length > 0;
   return Boolean(cleanText(value));
+}
+
+function ensurePrimaryExperience(mcs: MCS) {
+  if (!mcs.experience[0]) mcs.experience[0] = { ...DEFAULT_EXPERIENCE };
 }
 
 export function assessMCSQuality(mcs: MCS): MCSQuality {
@@ -219,15 +234,15 @@ export function mergeClarificationAnswers(mcs: MCS, answers: Record<string, stri
         next.summary = cleaned;
         break;
       case 'experience[0].role':
-        if (!next.experience[0]) next.experience[0] = { company: '', role: '', bullets: [] };
+        ensurePrimaryExperience(next);
         next.experience[0].role = cleaned;
         break;
       case 'experience[0].company':
-        if (!next.experience[0]) next.experience[0] = { company: '', role: '', bullets: [] };
+        ensurePrimaryExperience(next);
         next.experience[0].company = cleaned;
         break;
       case 'experience[0].bullets':
-        if (!next.experience[0]) next.experience[0] = { company: '', role: '', bullets: [] };
+        ensurePrimaryExperience(next);
         next.experience[0].bullets = [cleaned];
         break;
       case 'education[0].institution':

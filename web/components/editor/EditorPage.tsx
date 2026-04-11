@@ -45,7 +45,7 @@ export default function EditorPage() {
   const sectionScores = useMemo(() => {
     const q = quality ?? assessMCSQuality(current);
     return {
-      profile: Math.round((q.sections.find((s) => s.section === 'personal')?.score ?? 0 + (q.sections.find((s) => s.section === 'summary')?.score ?? 0)) / 2),
+      profile: Math.round(((q.sections.find((s) => s.section === 'personal')?.score ?? 0) + (q.sections.find((s) => s.section === 'summary')?.score ?? 0)) / 2),
       experience: q.sections.find((s) => s.section === 'experience')?.score ?? 0,
       education: q.sections.find((s) => s.section === 'education')?.score ?? 0,
       skills: q.sections.find((s) => s.section === 'skills')?.score ?? 0,
@@ -230,7 +230,7 @@ export default function EditorPage() {
                     onClick={() => {
                       const next = structuredClone(current);
                       next.experience.splice(expIndex, 1);
-                      if (next.experience.length === 0) next.experience.push({ company: '', role: '', bullets: [] });
+                      if (next.experience.length === 0) next.experience.push({ company: '', role: '', startDate: '', endDate: '', current: false, location: '', bullets: [] });
                       commit(next, 'Experience removed');
                     }}
                   >

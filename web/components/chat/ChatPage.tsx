@@ -132,8 +132,8 @@ export default function ChatPage() {
     }
 
     const userId = nextId.current++;
-    const fileText = upload ? `Uploaded file: ${upload.name}` : '';
-    setMessages((prev) => [...prev, { id: userId, role: 'user', text: [text, fileText].filter(Boolean).join('\n') }]);
+    const fileLabel = upload ? `Uploaded file: ${upload.name}` : '';
+    setMessages((prev) => [...prev, { id: userId, role: 'user', text: [text, fileLabel].filter(Boolean).join('\n') }]);
     setInput('');
     setTyping(true);
 

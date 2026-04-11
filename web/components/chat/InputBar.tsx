@@ -14,14 +14,21 @@ export type UploadedFilePayload = {
 };
 
 async function toPayload(file: File): Promise<UploadedFilePayload> {
-  const buffer = await file.arrayBuffer();
-  const bytes = new Uint8Array(buffer);
-  let binary = '';
-  for (let i = 0; i < bytes.length; i += 1) binary += String.fromCharCode(bytes[i]);
+  const base64 = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = String(reader.result ?? '');
+      const [, encoded = ''] = result.split(',');
+      resolve(encoded);
+    };
+    reader.onerror = () => reject(new Error('Failed to read upload'));
+    reader.readAsDataURL(file);
+  });
+
   return {
     name: file.name,
     mimeType: file.type,
-    base64: btoa(binary),
+    base64,
   };
 }
 

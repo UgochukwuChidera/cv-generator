@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import React from 'react';
 import { Document, Page, Text, View, StyleSheet, pdf } from '@react-pdf/renderer';
-import type { MCS } from '@nexus/schema';
 import { normalizeMCS } from '@/lib/mcs';
 
 const styles = StyleSheet.create({
@@ -15,72 +14,79 @@ const styles = StyleSheet.create({
   bullet: { marginLeft: 8, marginBottom: 2 },
 });
 
-function ResumeDoc({ mcs }: { mcs: MCS }) {
-  return React.createElement(
-    Document,
-    null,
-    React.createElement(
-      Page,
-      { size: 'A4', style: styles.page },
-      React.createElement(Text, { style: styles.name }, mcs.personal.name || 'Resume'),
-      React.createElement(
-        Text,
-        { style: styles.contact },
-        [mcs.personal.title, mcs.personal.email, mcs.personal.phone, mcs.personal.location].filter(Boolean).join(' · ')
-      ),
-      mcs.summary ? React.createElement(View, null, React.createElement(Text, { style: styles.heading }, 'Summary'), React.createElement(Text, null, mcs.summary)) : null,
-      mcs.experience.length > 0
-        ? React.createElement(
-            View,
-            null,
-            React.createElement(Text, { style: styles.heading }, 'Experience'),
-            ...mcs.experience.map((exp, idx) =>
-              React.createElement(
-                View,
-                { key: `${exp.company}-${idx}` },
-                React.createElement(
-                  View,
-                  { style: styles.roleLine },
-                  React.createElement(Text, { style: styles.role }, `${exp.role} — ${exp.company}`),
-                  React.createElement(Text, null, [exp.startDate, exp.current ? 'Present' : exp.endDate].filter(Boolean).join(' — '))
-                ),
-                exp.location ? React.createElement(Text, { style: styles.meta }, exp.location) : null,
-                ...(exp.bullets ?? []).map((b, bIdx) => React.createElement(Text, { key: `${idx}-${bIdx}`, style: styles.bullet }, `• ${b}`))
-              )
-            )
-          )
-        : null,
-      mcs.education.length > 0
-        ? React.createElement(
-            View,
-            null,
-            React.createElement(Text, { style: styles.heading }, 'Education'),
-            ...mcs.education.map((edu, idx) =>
-              React.createElement(Text, { key: `${edu.institution}-${idx}` }, `${edu.institution} · ${[edu.degree, edu.field].filter(Boolean).join(' in ')}`)
-            )
-          )
-        : null,
-      mcs.skills.length > 0
-        ? React.createElement(
-            View,
-            null,
-            React.createElement(Text, { style: styles.heading }, 'Skills'),
-            React.createElement(Text, null, mcs.skills.map((s) => s.name).join(' · '))
-          )
-        : null
-    )
-  );
-}
-
 export async function POST(req: NextRequest) {
   try {
     const { mcs } = (await req.json()) as { mcs?: unknown };
     if (!mcs) return NextResponse.json({ error: 'mcs required' }, { status: 400 });
 
-    const normalized = normalizeMCS(mcs);
-    const buffer = await pdf(React.createElement(ResumeDoc, { mcs: normalized })).toBuffer();
+    const data = normalizeMCS(mcs);
 
-    return new NextResponse(new Uint8Array(buffer), {
+    const doc = React.createElement(
+      Document,
+      null,
+      React.createElement(
+        Page,
+        { size: 'A4', style: styles.page },
+        React.createElement(Text, { style: styles.name }, data.personal.name || 'Resume'),
+        React.createElement(
+          Text,
+          { style: styles.contact },
+          [data.personal.title, data.personal.email, data.personal.phone, data.personal.location].filter(Boolean).join(' · ')
+        ),
+        data.summary
+          ? React.createElement(
+              View,
+              null,
+              React.createElement(Text, { style: styles.heading }, 'Summary'),
+              React.createElement(Text, null, data.summary)
+            )
+          : null,
+        data.experience.length > 0
+          ? React.createElement(
+              View,
+              null,
+              React.createElement(Text, { style: styles.heading }, 'Experience'),
+              ...data.experience.map((exp, idx) =>
+                React.createElement(
+                  View,
+                  { key: `${exp.company}-${idx}` },
+                  React.createElement(
+                    View,
+                    { style: styles.roleLine },
+                    React.createElement(Text, { style: styles.role }, `${exp.role} — ${exp.company}`),
+                    React.createElement(Text, null, [exp.startDate, exp.current ? 'Present' : exp.endDate].filter(Boolean).join(' — '))
+                  ),
+                  exp.location ? React.createElement(Text, { style: styles.meta }, exp.location) : null,
+                  ...(exp.bullets ?? []).map((b, bulletIndex) => React.createElement(Text, { key: `${idx}-${bulletIndex}`, style: styles.bullet }, `• ${b}`))
+                )
+              )
+            )
+          : null,
+        data.education.length > 0
+          ? React.createElement(
+              View,
+              null,
+              React.createElement(Text, { style: styles.heading }, 'Education'),
+              ...data.education.map((edu, idx) =>
+                React.createElement(Text, { key: `${edu.institution}-${idx}` }, `${edu.institution} · ${[edu.degree, edu.field].filter(Boolean).join(' in ')}`)
+              )
+            )
+          : null,
+        data.skills.length > 0
+          ? React.createElement(
+              View,
+              null,
+              React.createElement(Text, { style: styles.heading }, 'Skills'),
+              React.createElement(Text, null, data.skills.map((s) => s.name).join(' · '))
+            )
+          : null
+      )
+    );
+
+    const blob = await pdf(doc).toBlob();
+    const arrayBuffer = await blob.arrayBuffer();
+
+    return new NextResponse(arrayBuffer, {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': 'attachment; filename="resume.pdf"',
