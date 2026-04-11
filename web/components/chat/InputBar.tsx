@@ -55,9 +55,10 @@ export default function InputBar({
           className="btn-ghost"
           type="button"
           onClick={() => fileRef.current?.click()}
-          title="Upload resume file"
+          title="Attach file"
+          aria-label="Attach file"
         >
-          + File
+          📎
         </button>
 
         <input

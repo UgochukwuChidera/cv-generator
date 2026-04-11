@@ -14,6 +14,18 @@ export interface AIConfig {
   model?: string;
 }
 
+const APP_CAPABILITIES_CONTEXT = `App capabilities:
+- Extract profile data from pasted text or uploaded TXT/PDF/DOCX/JSON/YAML.
+- Ask clarification questions for missing required profile fields.
+- Edit profile sections (personal, summary, experience, education, skills, projects, languages).
+- Run JD targeting analysis with fit score and sub-scores.
+- Generate tailored bullet suggestions and cover letters.
+- Export deliverables in PDF, DOCX, HTML, JSON, YAML.
+Behavior requirements:
+- Be evidence-based: never infer missing facts as complete.
+- If data is unknown, keep it empty.
+- Scores and recommendations must reflect actual provided content.`;
+
 function parseAIJson<T>(raw: string): T {
   const stripped = raw
     .replace(/```json\n?/gi, '')
@@ -128,7 +140,8 @@ export type GuidedExtractResult = {
 };
 
 export async function extractGuidedMCS(config: AIConfig, text: string): Promise<GuidedExtractResult> {
-  const systemPrompt = `You are an expert resume parser.
+  const systemPrompt = `${APP_CAPABILITIES_CONTEXT}
+You are an expert resume parser.
 Return STRICT JSON only with this structure:
 {
   "personal": { "name": "", "title": "", "location": "", "email": "", "phone": "", "website": "", "linkedin": "", "github": "", "twitter": "" },
@@ -143,7 +156,8 @@ Return STRICT JSON only with this structure:
 }
 Rules:
 - Never return null; use empty strings/arrays when unknown.
-- Keep only facts supported by the input text.`;
+- Keep only facts supported by the input text.
+- Do not invent languages, projects, education, or achievements.`;
 
   const raw = await callAI(config, systemPrompt, `Extract profile from:\n\n${text}`);
   const draft = parseAIJson<unknown>(raw);
@@ -182,7 +196,8 @@ export type JDTargetResult = {
 };
 
 export async function targetJD(config: AIConfig, mcs: MCS, jd: string): Promise<JDTargetResult> {
-  const systemPrompt = `You are a career coach.
+  const systemPrompt = `${APP_CAPABILITIES_CONTEXT}
+You are a career coach.
 Return STRICT JSON with this exact structure:
 {
   "score": 0,
@@ -196,7 +211,9 @@ Return STRICT JSON with this exact structure:
 Rules:
 - score and subScores are 0-100 integers.
 - tailored must keep same resume shape and avoid nulls.
-- bulletSuggestions should be practical rewritten achievements.`;
+- bulletSuggestions should be practical rewritten achievements.
+- Never inflate scores when source data is missing.
+- Missing or empty sections must reduce relevant scores.`;
 
   const raw = await callAI(
     config,
@@ -241,7 +258,8 @@ export async function generateCoverLetter(
   jd: string,
   tone: 'formal' | 'conversational' | 'technical' | 'storytelling' = 'formal'
 ): Promise<string> {
-  const systemPrompt = `You are an expert resume writer.
+  const systemPrompt = `${APP_CAPABILITIES_CONTEXT}
+You are an expert resume writer.
 Write a concise, role-specific cover letter.
 Tone: ${tone}.
 Return plain text only.`;

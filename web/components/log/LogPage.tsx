@@ -10,9 +10,9 @@ type LogEntry = {
 };
 
 const FALLBACK_LOG: LogEntry[] = [
-  { version: 'v1.2.0', date: '2026-04-11', kind: 'feat', text: 'Nexus UI sync rollout with mono-first visual system.' },
-  { version: 'v1.1.8', date: '2026-04-03', kind: 'fix', text: 'Stability and editor interaction fixes.' },
-  { version: 'v1.1.2', date: '2026-03-18', kind: 'stab', text: 'Baseline alignment and reliability updates.' },
+  { version: 'v1.0.0', date: '2026-04-11', kind: 'feat', text: 'Initial release: chat extraction + clarification, structured editor, JD targeting, cover-letter generation, and exports (PDF/DOCX/HTML/JSON/YAML).' },
+  { version: 'v1.0.0', date: '2026-04-11', kind: 'feat', text: 'Added profile quality scoring with section completeness and actionable missing-field prompts.' },
+  { version: 'v1.0.0', date: '2026-04-11', kind: 'fix', text: 'Validated upload parsing and schema-normalized persistence for repeatable CV/resume workflows.' },
 ];
 
 export default function LogPage() {

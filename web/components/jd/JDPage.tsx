@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useNexusStore } from '@/lib/store';
 import { useShell } from '@/components/layout/ShellContext';
 import ScoreRing from './ScoreRing';
@@ -18,6 +18,26 @@ type JDResult = {
   bulletSuggestions?: string[];
 };
 
+type UploadedFilePayload = {
+  name: string;
+  mimeType?: string;
+  base64: string;
+};
+
+async function toPayload(file: File): Promise<UploadedFilePayload> {
+  const base64 = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = String(reader.result ?? '');
+      const [, encoded = ''] = result.split(',');
+      resolve(encoded);
+    };
+    reader.onerror = () => reject(new Error('Failed to read upload'));
+    reader.readAsDataURL(file);
+  });
+  return { name: file.name, mimeType: file.type, base64 };
+}
+
 export default function JDPage() {
   const { mcs, aiKey, aiProvider, aiModel, setMCS, setJDAnalysis, jdAnalysis, saveCoverLetter } = useNexusStore();
   const { openApiKeyModal, setStatus } = useShell();
@@ -25,6 +45,7 @@ export default function JDPage() {
   const [tone, setTone] = useState<Tone>('formal');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<JDResult | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const words = useMemo(() => jd.trim().split(/\s+/).filter(Boolean).length, [jd]);
 
@@ -122,6 +143,29 @@ export default function JDPage() {
     }
   }
 
+  async function uploadJDFile(file: File) {
+    if (!file) return;
+    setLoading(true);
+    try {
+      const payload = await toPayload(file);
+      const res = await fetch('/api/upload/text', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ file: payload }),
+      });
+      const data = (await res.json()) as { ok: boolean; text?: string; error?: string };
+      if (!res.ok || !data.ok) throw new Error(data.error || 'File extraction failed');
+      const text = (data.text ?? '').trim();
+      if (!text) throw new Error('No readable text found in file');
+      setJd(text);
+      setStatus(`Loaded JD from ${file.name}`);
+    } catch {
+      setStatus('JD file upload failed');
+    } finally {
+      setLoading(false);
+    }
+  }
+
   const scores = result?.subScores ?? jdAnalysis?.subScores ?? { skills: 0, experience: 0, domain: 0 };
   const fit = result?.score ?? jdAnalysis?.score ?? 0;
   const missingSkills = result?.missingSkills ?? jdAnalysis?.missingSkills ?? [];
@@ -139,9 +183,22 @@ export default function JDPage() {
         <div className="hint-row"><span>{words} words</span></div>
 
         <div className="row-btns">
+          <button className="btn-ghost" onClick={() => fileRef.current?.click()}>📎 JD File</button>
           <button className="btn-ghost" onClick={() => setJd('')}>Clear</button>
           <button className="btn-primary pill" onClick={analyze} disabled={loading}>{loading ? 'Analyzing...' : 'Analyze Alignment'}</button>
         </div>
+        <input
+          ref={fileRef}
+          hidden
+          type="file"
+          accept=".txt,.pdf,.docx,.json,.yaml,.yml"
+          onChange={async (event) => {
+            const file = event.target.files?.[0];
+            if (!file) return;
+            await uploadJDFile(file);
+            event.currentTarget.value = '';
+          }}
+        />
 
         <div className="jd-tag-grid">
           <div className="card-lo">

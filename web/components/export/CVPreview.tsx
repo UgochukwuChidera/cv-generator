@@ -1,8 +1,27 @@
 'use client';
 
 import type { MCS } from '@nexus/schema';
+import type { ExportTheme } from './ThemePicker';
 
-export default function CVPreview({ mcs, zoom }: { mcs: MCS | null; zoom: number }) {
+type DocumentType = 'resume' | 'cv' | 'cover-letter';
+
+export default function CVPreview({
+  mcs,
+  zoom,
+  theme,
+  accent,
+  fontFamily,
+  documentType,
+  coverLetter,
+}: {
+  mcs: MCS | null;
+  zoom: number;
+  theme: ExportTheme;
+  accent: string;
+  fontFamily: string;
+  documentType: DocumentType;
+  coverLetter: string;
+}) {
   if (!mcs) {
     return (
       <div className="ex-cv" style={{ transform: `scale(${zoom / 100})` }}>
@@ -11,13 +30,28 @@ export default function CVPreview({ mcs, zoom }: { mcs: MCS | null; zoom: number
     );
   }
 
+  if (documentType === 'cover-letter') {
+    return (
+      <div
+        className="ex-cv"
+        style={{ transform: `scale(${zoom / 100})`, fontFamily }}
+        data-theme={theme}
+      >
+        <h2 style={{ color: accent }}>Cover Letter</h2>
+        <p>{mcs.personal?.name || 'Candidate'}</p>
+        <hr />
+        <pre className="cover-preview">{coverLetter || 'No cover letter generated yet. Use JD Targeting to generate one.'}</pre>
+      </div>
+    );
+  }
+
   return (
-    <div className="ex-cv" style={{ transform: `scale(${zoom / 100})` }}>
-      <h2>{mcs.personal?.name || 'Unnamed Candidate'}</h2>
+    <div className="ex-cv" style={{ transform: `scale(${zoom / 100})`, fontFamily }} data-theme={theme}>
+      <h2 style={{ color: accent }}>{mcs.personal?.name || 'Unnamed Candidate'}</h2>
       <p>{[mcs.personal?.title, mcs.personal?.email, mcs.personal?.location].filter(Boolean).join(' · ')}</p>
       <hr />
       {mcs.summary && <p>{mcs.summary}</p>}
-      <h5>Experience</h5>
+      <h5>{documentType === 'cv' ? 'Professional Experience' : 'Experience'}</h5>
       {(mcs.experience ?? []).slice(0, 3).map((exp, i) => (
         <div key={`${exp.role}-${i}`}>
           <p><strong>{exp.role}</strong> — {exp.company}</p>
