@@ -36,9 +36,9 @@
   --blue:         #7f9dff;
 
   /* ── Typography ────────────────────────────────────────── */
-  --font-display: var(--font-display-family), 'Space Grotesk', system-ui, sans-serif;
-  --font-body:    var(--font-body-family), 'Inter', system-ui, sans-serif;
-  --font-mono:    var(--font-mono-family), 'JetBrains Mono', 'Fira Code', monospace;
+  --font-display: 'Avenir Next', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  --font-body:    'Inter', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  --font-mono:    'JetBrains Mono', 'Fira Code', 'SFMono-Regular', 'Cascadia Code', monospace;
 
   /* ── Shape ─────────────────────────────────────────────── */
   --r-sm:  4px;

@@ -1,24 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-
-const bodyFont = Inter({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-body-family",
-});
-
-const displayFont = Space_Grotesk({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-display-family",
-});
-
-const monoFont = JetBrains_Mono({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-mono-family",
-});
 
 export const metadata: Metadata = {
   title: "Nexus — Career Intelligence",
@@ -29,7 +10,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={`${bodyFont.variable} ${displayFont.variable} ${monoFont.variable}`}>{children}</body>
+      <body>{children}</body>
     </html>
   );
 }
