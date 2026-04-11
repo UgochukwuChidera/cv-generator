@@ -3,23 +3,33 @@ import React from 'react';
 import { Document, Page, Text, View, StyleSheet, pdf } from '@react-pdf/renderer';
 import { normalizeMCS } from '@/lib/mcs';
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   page: { padding: 28, fontSize: 10, fontFamily: 'Helvetica' },
-  name: { fontSize: 20, marginBottom: 4 },
+  name: { fontSize: 20, marginBottom: 4, fontWeight: 'bold' },
   contact: { fontSize: 10, marginBottom: 10, color: '#444' },
-  heading: { fontSize: 11, marginTop: 10, marginBottom: 4, textTransform: 'uppercase' },
+  heading: { fontSize: 11, marginTop: 10, marginBottom: 4, textTransform: 'uppercase', fontWeight: 'bold' },
   roleLine: { display: 'flex', flexDirection: 'row', justifyContent: 'space-between' },
   role: { fontSize: 10, fontWeight: 'bold' },
   meta: { color: '#555', marginBottom: 2 },
   bullet: { marginLeft: 8, marginBottom: 2 },
+  skillWrap: { display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
+  skillPill: { borderWidth: 1, borderColor: '#d1d5e1', borderRadius: 10, paddingHorizontal: 5, paddingVertical: 1, marginBottom: 3 },
 });
 
 export async function POST(req: NextRequest) {
   try {
-    const { mcs } = (await req.json()) as { mcs?: unknown };
+    const { mcs, theme, documentType } = (await req.json()) as { mcs?: unknown; theme?: string; documentType?: 'resume' | 'cv' };
     if (!mcs) return NextResponse.json({ error: 'mcs required' }, { status: 400 });
 
     const data = normalizeMCS(mcs);
+    const accent = theme === 'Modern' ? '#2d6cdf' : theme === 'Creative' ? '#8a3ffc' : theme === 'Academic' ? '#2f2f2f' : theme === 'Minimal' ? '#111111' : '#ff4d6a';
+    const maxExperience = documentType === 'cv' ? 8 : 4;
+    const maxProjects = documentType === 'cv' ? 4 : 2;
+    const styles = StyleSheet.create({
+      ...baseStyles,
+      heading: { ...baseStyles.heading, color: accent },
+      name: { ...baseStyles.name, color: accent },
+    });
 
     const doc = React.createElement(
       Document,
@@ -46,7 +56,7 @@ export async function POST(req: NextRequest) {
               View,
               null,
               React.createElement(Text, { style: styles.heading }, 'Experience'),
-              ...data.experience.map((exp, idx) =>
+              ...data.experience.slice(0, maxExperience).map((exp, idx) =>
                 React.createElement(
                   View,
                   { key: `${exp.company}-${idx}` },
@@ -77,7 +87,27 @@ export async function POST(req: NextRequest) {
               View,
               null,
               React.createElement(Text, { style: styles.heading }, 'Skills'),
-              React.createElement(Text, null, data.skills.map((s) => s.name).join(' · '))
+              React.createElement(
+                View,
+                { style: styles.skillWrap },
+                ...data.skills.map((s, idx) =>
+                  React.createElement(
+                    View,
+                    { key: `${s.name}-${idx}`, style: styles.skillPill },
+                    React.createElement(Text, null, s.name)
+                  )
+                )
+              )
+            )
+          : null,
+        (data.projects ?? []).length > 0
+          ? React.createElement(
+              View,
+              null,
+              React.createElement(Text, { style: styles.heading }, 'Projects'),
+              ...(data.projects ?? []).slice(0, maxProjects).map((project, idx) =>
+                React.createElement(Text, { key: `${project.name}-${idx}` }, `${project.name}${project.description ? ` — ${project.description}` : ''}`)
+              )
             )
           : null
       )

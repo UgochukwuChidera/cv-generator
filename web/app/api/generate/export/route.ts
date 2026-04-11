@@ -5,10 +5,11 @@ import { mcsToHtml } from '@/lib/render';
 
 export async function POST(req: NextRequest) {
   try {
-    const { mcs, format, theme } = (await req.json()) as {
+    const { mcs, format, theme, documentType } = (await req.json()) as {
       mcs?: unknown;
       format?: 'JSON' | 'YAML' | 'HTML';
       theme?: string;
+      documentType?: 'resume' | 'cv';
     };
 
     if (!mcs || !format) {
@@ -35,7 +36,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const html = mcsToHtml(normalized, theme || 'Professional');
+    const html = mcsToHtml(normalized, theme || 'Professional', documentType === 'cv' ? 'cv' : 'resume');
     return new NextResponse(html, {
       headers: {
         'Content-Type': 'text/html; charset=utf-8',

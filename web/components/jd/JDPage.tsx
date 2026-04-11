@@ -1,12 +1,11 @@
 'use client';
 
+import Link from 'next/link';
 import { useMemo, useRef, useState } from 'react';
 import { useNexusStore } from '@/lib/store';
 import { useShell } from '@/components/layout/ShellContext';
 import ScoreRing from './ScoreRing';
 import BulletSuggestion from './BulletSuggestion';
-
-type Tone = 'formal' | 'technical' | 'storytelling';
 
 type JDResult = {
   score: number;
@@ -42,7 +41,6 @@ export default function JDPage() {
   const { mcs, aiKey, aiProvider, aiModel, setMCS, setJDAnalysis, jdAnalysis, saveCoverLetter } = useNexusStore();
   const { openApiKeyModal, setStatus } = useShell();
   const [jd, setJd] = useState('');
-  const [tone, setTone] = useState<Tone>('formal');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<JDResult | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -90,6 +88,7 @@ export default function JDPage() {
         implicitSkills: next.implicitSkills ?? [],
         bulletSuggestions: next.bulletSuggestions ?? [],
         coverLetter: next.coverLetter,
+        jdText: jd.trim(),
       });
       if (next.coverLetter) {
         saveCoverLetter(`jd-${Date.now()}`, next.coverLetter);
@@ -97,47 +96,6 @@ export default function JDPage() {
       setStatus('Alignment analyzed');
     } catch {
       setStatus('Alignment failed');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function generateCover() {
-    if (!mcs || !jd.trim()) return;
-    if (!aiKey) {
-      openApiKeyModal();
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const res = await fetch('/api/ai/generate-cover', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': aiKey,
-          'x-provider': aiProvider,
-        },
-        body: JSON.stringify({ mcs, jd, tone, provider: aiProvider, model: aiModel }),
-      });
-
-      const data = (await res.json()) as { ok: boolean; error?: string; coverLetter?: string };
-      if (!res.ok || !data.ok) throw new Error(data.error || 'Cover generation failed');
-
-      const cover = data.coverLetter ?? '';
-      setResult((prev) => ({ ...(prev ?? { score: 0, subScores: { skills: 0, experience: 0, domain: 0 }, coverLetter: '' }), coverLetter: cover }));
-      setJDAnalysis({
-        score: result?.score ?? jdAnalysis?.score ?? 0,
-        subScores: result?.subScores ?? jdAnalysis?.subScores ?? { skills: 0, experience: 0, domain: 0 },
-        missingSkills: result?.missingSkills ?? jdAnalysis?.missingSkills ?? [],
-        implicitSkills: result?.implicitSkills ?? jdAnalysis?.implicitSkills ?? [],
-        bulletSuggestions: result?.bulletSuggestions ?? jdAnalysis?.bulletSuggestions ?? [],
-        coverLetter: cover,
-      });
-      if (cover) saveCoverLetter(`cover-${Date.now()}`, cover);
-      setStatus('Cover letter generated');
-    } catch {
-      setStatus('Cover generation failed');
     } finally {
       setLoading(false);
     }
@@ -177,7 +135,7 @@ export default function JDPage() {
     <div className="jd-layout">
       <div className="jd-left">
         <h3>JD Targeting</h3>
-        <p className="sub">Paste a job description for fit analysis, keyword gaps, tailored bullets, and deliverable cover letter.</p>
+        <p className="sub">Paste a job description for fit analysis, keyword gaps, and tailored bullet improvements. Cover letters now live in Export.</p>
 
         <textarea className="field jd-field" rows={9} value={jd} onChange={(e) => setJd(e.target.value)} />
         <div className="hint-row"><span>{words} words</span></div>
@@ -240,16 +198,12 @@ export default function JDPage() {
         </div>
 
         <div className="card-lo">
-          <h4>Cover Letter (Deliverable)</h4>
-          <div className="tone-row">
-            {(['formal', 'technical', 'storytelling'] as Tone[]).map((item) => (
-              <button key={item} className={`tone ${tone === item ? 'on' : ''}`} onClick={() => setTone(item)}>
-                {item}
-              </button>
-            ))}
-          </div>
-          <button className="btn-primary pill" onClick={generateCover} disabled={loading || !jd.trim()}>{loading ? 'Generating...' : 'Generate'}</button>
-          {cover && <pre className="cover-out">{cover}</pre>}
+          <h4>Ready to Generate Deliverables?</h4>
+          <p className="sub">Switch to Export to generate polished resume/CV outputs and cover letters from this analysis.</p>
+          <Link className="btn-primary pill inline-link-btn" href="/export">
+            Go to Export
+          </Link>
+          {cover && <p className="sub">A draft cover letter has already been prepared from your latest alignment run.</p>}
         </div>
       </aside>
     </div>
