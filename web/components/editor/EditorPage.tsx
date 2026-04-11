@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { MCS } from '@nexus/schema';
 import { useNexusStore } from '@/lib/store';
 import { assessMCSQuality, normalizeMCS } from '@/lib/mcs';
@@ -20,6 +20,8 @@ const EMPTY_MCS: MCS = normalizeMCS({
   meta: { version: 1, updated_at: new Date().toISOString() },
   history: [],
 });
+const PREVIEW_DEBOUNCE_MS = 90;
+const PERSISTENCE_DEBOUNCE_MS = 220;
 
 function Label({ title }: { title: string }) {
   return <span style={{ display: 'block', marginBottom: 5, fontSize: 10, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--t3)' }}>{title}</span>;
@@ -29,18 +31,32 @@ export default function EditorPage() {
   const { mcs, setMCS, aiKey, aiProvider, aiModel, quality } = useNexusStore();
   const { openApiKeyModal, setStatus } = useShell();
   const [section, setSection] = useState<Section>('profile');
-  const [previewMcs, setPreviewMcs] = useState<MCS>(mcs ?? EMPTY_MCS);
-
-  const current = useMemo(() => (mcs ? normalizeMCS(mcs) : EMPTY_MCS), [mcs]);
+  const [draftMcs, setDraftMcs] = useState<MCS>(mcs ? normalizeMCS(mcs) : EMPTY_MCS);
+  const [previewMcs, setPreviewMcs] = useState<MCS>(draftMcs);
+  const hasHydrated = useRef(false);
+  const current = draftMcs;
 
   useEffect(() => {
-    if (!mcs) setMCS(EMPTY_MCS);
+    if (!mcs) {
+      setMCS(EMPTY_MCS);
+      return;
+    }
+    setDraftMcs(normalizeMCS(mcs));
   }, [mcs, setMCS]);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setPreviewMcs(current), 120);
+    const timer = window.setTimeout(() => setPreviewMcs(current), PREVIEW_DEBOUNCE_MS);
     return () => window.clearTimeout(timer);
   }, [current]);
+
+  useEffect(() => {
+    if (!hasHydrated.current) {
+      hasHydrated.current = true;
+      return;
+    }
+    const timer = window.setTimeout(() => setMCS(normalizeMCS(current)), PERSISTENCE_DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
+  }, [current, setMCS]);
 
   const sectionScores = useMemo(() => {
     const q = quality ?? assessMCSQuality(current);
@@ -50,12 +66,12 @@ export default function EditorPage() {
       education: q.sections.find((s) => s.section === 'education')?.score ?? 0,
       skills: q.sections.find((s) => s.section === 'skills')?.score ?? 0,
       projects: q.sections.find((s) => s.section === 'projects')?.score ?? 100,
-      languages: q.sections.find((s) => s.section === 'languages')?.score ?? 100,
+      languages: q.sections.find((s) => s.section === 'languages')?.score ?? 0,
     };
   }, [quality, current]);
 
   function commit(next: MCS, message?: string) {
-    setMCS(normalizeMCS(next));
+    setDraftMcs(normalizeMCS(next));
     if (message) setStatus(message);
   }
 
@@ -145,7 +161,7 @@ export default function EditorPage() {
         {section === 'experience' && (
           <div className="card-lo on-hi">
             {current.experience.map((exp, expIndex) => (
-              <div key={`${exp.company}-${exp.role}-${expIndex}`} style={{ marginBottom: 16, borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>
+              <div key={`exp-${expIndex}`} style={{ marginBottom: 16, borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>
                 <div className="grid4">
                   {(
                     [
@@ -185,7 +201,7 @@ export default function EditorPage() {
 
                 <div className="bullets-container">
                   {(exp.bullets ?? []).map((bullet, bulletIndex) => (
-                    <div className="bullet-row2" key={`${bullet}-${bulletIndex}`}>
+                    <div className="bullet-row2" key={`exp-${expIndex}-bullet-${bulletIndex}`}>
                       <span className="bdot" />
                       <textarea
                         className="bullet-field"
@@ -256,7 +272,7 @@ export default function EditorPage() {
         {section === 'education' && (
           <div className="card-lo on-hi">
             {current.education.map((edu, index) => (
-              <div key={`${edu.institution}-${index}`} style={{ marginBottom: 12, borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>
+              <div key={`edu-${index}`} style={{ marginBottom: 12, borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>
                 <div className="grid4">
                   {(
                     [
@@ -301,7 +317,7 @@ export default function EditorPage() {
         {section === 'skills' && (
           <div className="card-lo on-hi">
             {current.skills.map((skill, index) => (
-              <div key={`${skill.name}-${index}`} className="grid4" style={{ marginBottom: 10 }}>
+              <div key={`skill-${index}`} className="grid4" style={{ marginBottom: 10 }}>
                 <label>
                   <Label title="Skill" />
                   <input className="field" value={skill.name} onChange={(e) => {
@@ -337,7 +353,7 @@ export default function EditorPage() {
         {section === 'projects' && (
           <div className="card-lo on-hi">
             {current.projects?.map((project, index) => (
-              <div key={`${project.name}-${index}`} style={{ marginBottom: 12, borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>
+              <div key={`project-${index}`} style={{ marginBottom: 12, borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>
                 <div className="grid4">
                   <label>
                     <Label title="Project name" />
@@ -396,7 +412,7 @@ export default function EditorPage() {
         {section === 'languages' && (
           <div className="card-lo on-hi">
             {current.languages?.map((lang, index) => (
-              <div key={`${lang.language}-${index}`} className="grid4" style={{ marginBottom: 10 }}>
+              <div key={`lang-${index}`} className="grid4" style={{ marginBottom: 10 }}>
                 <label>
                   <Label title="Language" />
                   <input className="field" value={lang.language} onChange={(e) => {

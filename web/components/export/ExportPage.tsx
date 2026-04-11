@@ -5,7 +5,7 @@ import { useNexusStore } from '@/lib/store';
 import { useShell } from '@/components/layout/ShellContext';
 import ThemePicker, { type ExportTheme } from './ThemePicker';
 import FormatPicker, { type ExportFormat } from './FormatPicker';
-import CVPreview from './CVPreview';
+import CVPreview, { NO_COVER_LETTER_MESSAGE } from './CVPreview';
 
 function downloadBlob(content: Blob, filename: string) {
   const url = URL.createObjectURL(content);
@@ -31,15 +31,32 @@ export default function ExportPage() {
   const { setStatus } = useShell();
   const [theme, setTheme] = useState<ExportTheme>('Professional');
   const [format, setFormat] = useState<ExportFormat>('PDF');
+  const [documentType, setDocumentType] = useState<'resume' | 'cv' | 'cover-letter'>('resume');
+  const [accent, setAccent] = useState('#ff4d6a');
+  const [fontFamily, setFontFamily] = useState(`'JetBrains Mono', Consolas, monospace`);
   const [zoom, setZoom] = useState(100);
   const [loading, setLoading] = useState(false);
 
   const coverLetterCount = useMemo(() => Object.keys(mcs?.coverLetters ?? {}).length, [mcs?.coverLetters]);
+  const latestCoverLetter = useMemo(() => {
+    const values = Object.values(mcs?.coverLetters ?? {});
+    return values.length > 0 ? (values[values.length - 1]?.content ?? '') : (jdAnalysis?.coverLetter ?? '');
+  }, [jdAnalysis?.coverLetter, mcs?.coverLetters]);
 
   async function onDownload() {
     if (!mcs) return;
     setLoading(true);
     try {
+      if (documentType === 'cover-letter') {
+        if (!latestCoverLetter.trim()) {
+          setStatus(NO_COVER_LETTER_MESSAGE);
+          return;
+        }
+        const ext = format.toLowerCase();
+        downloadBlob(new Blob([latestCoverLetter], { type: 'text/plain' }), `cover-letter.${ext === 'docx' ? 'txt' : ext}`);
+        setStatus('Prepared cover letter export');
+        return;
+      }
       if (format === 'PDF') {
         await fetchAndDownload('/api/generate/pdf', { mcs, theme }, 'resume.pdf');
       } else if (format === 'DOCX') {
@@ -48,7 +65,7 @@ export default function ExportPage() {
         const ext = format.toLowerCase();
         await fetchAndDownload('/api/generate/export', { mcs, theme, format }, `resume.${ext}`);
       }
-      setStatus(`Prepared ${format} export`);
+      setStatus(`Prepared ${documentType.toUpperCase()} ${format} export`);
     } catch {
       setStatus('Export failed');
     } finally {
@@ -61,16 +78,44 @@ export default function ExportPage() {
       <aside className="ex-left">
         <h4>Visual Theme</h4>
         <ThemePicker value={theme} onChange={setTheme} />
+        <h4>Document Type</h4>
+        <div className="fmt-list">
+          {(['resume', 'cv', 'cover-letter'] as const).map((type) => (
+            <label key={type} className="fmt-label">
+              <input type="radio" name="doctype" checked={documentType === type} onChange={() => setDocumentType(type)} />
+              <span>{type}</span>
+            </label>
+          ))}
+        </div>
+        <h4>Font</h4>
+        <div className="fmt-list">
+          {[
+            { label: 'Mono', value: `'JetBrains Mono', Consolas, monospace` },
+            { label: 'Sans', value: `Inter, 'Segoe UI', Arial, sans-serif` },
+            { label: 'Serif', value: `'Times New Roman', Georgia, serif` },
+          ].map((font) => (
+            <label key={font.label} className="fmt-label">
+              <input type="radio" name="font-family" checked={fontFamily === font.value} onChange={() => setFontFamily(font.value)} />
+              <span>{font.label}</span>
+            </label>
+          ))}
+        </div>
+        <h4>Accent</h4>
+        <div className="accent-row">
+          {['#ff4d6a', '#4dd994', '#6b9fff', '#ffcc55', '#b58cff'].map((color) => (
+            <button key={color} className={`accent-dot ${accent === color ? 'on' : ''}`} style={{ background: color }} onClick={() => setAccent(color)} />
+          ))}
+        </div>
         <h4>Format</h4>
         <FormatPicker value={format} onChange={setFormat} />
       </aside>
 
       <div className="ex-mid">
         <div className="doc-head">
-          <h3>Document Preview</h3>
+          <h3>Document Preview · {documentType}</h3>
           <span className="ats-badge">● ATS Ready</span>
         </div>
-        <CVPreview mcs={mcs} zoom={zoom} />
+        <CVPreview mcs={mcs} zoom={zoom} theme={theme} accent={accent} fontFamily={fontFamily} documentType={documentType} coverLetter={latestCoverLetter} />
         <div className="zoom-row">
           <button onClick={() => setZoom((z) => Math.max(70, z - 10))}>-</button>
           <span>1 / 1</span>
@@ -82,6 +127,7 @@ export default function ExportPage() {
         <div className="card-lo">
           <h4>Export Summary</h4>
           <p>Theme: {theme}</p>
+          <p>Document: {documentType}</p>
           <p>Format: {format}</p>
           <p>Generated cover letters: {coverLetterCount}</p>
           <p>Latest fit score: {jdAnalysis?.score ?? 0}%</p>

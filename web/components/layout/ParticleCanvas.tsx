@@ -25,6 +25,7 @@ export default function ParticleCanvas() {
 
     let raf = 0;
     let particles: Particle[] = [];
+    const mouse = { x: -9999, y: -9999, active: false };
 
     const init = () => {
       const dpr = window.devicePixelRatio || 1;
@@ -57,9 +58,22 @@ export default function ParticleCanvas() {
       ctx.clearRect(0, 0, width, height);
 
       for (const p of particles) {
+        if (mouse.active) {
+          const dx = mouse.x - p.x;
+          const dy = mouse.y - p.y;
+          const dist = Math.hypot(dx, dy);
+          if (dist < 170) {
+            const pull = (170 - dist) / 1700;
+            p.vx += dx * pull * 0.02;
+            p.vy += dy * pull * 0.02;
+          }
+        }
+
         p.x += p.vx;
         p.y += p.vy;
         p.r += p.vr;
+        p.vx *= 0.992;
+        p.vy *= 0.992;
 
         if (p.x < -20) p.x = width + 20;
         if (p.y < -20) p.y = height + 20;
@@ -77,13 +91,26 @@ export default function ParticleCanvas() {
       raf = window.requestAnimationFrame(frame);
     };
 
+    const onPointerMove = (event: PointerEvent) => {
+      mouse.x = event.clientX;
+      mouse.y = event.clientY;
+      mouse.active = true;
+    };
+    const onPointerLeave = () => {
+      mouse.active = false;
+    };
+
     init();
     frame();
     window.addEventListener('resize', init);
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerleave', onPointerLeave);
 
     return () => {
       window.cancelAnimationFrame(raf);
       window.removeEventListener('resize', init);
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerleave', onPointerLeave);
     };
   }, []);
 

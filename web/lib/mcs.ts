@@ -188,7 +188,13 @@ function ensurePrimaryExperience(mcs: MCS) {
 export function assessMCSQuality(mcs: MCS): MCSQuality {
   const sections: SectionCompleteness[] = (Object.keys(REQUIRED) as MissingField['section'][]).map((section) => {
     const required = REQUIRED[section];
-    if (required.length === 0) return { section, score: 100, missing: [] };
+    if (required.length === 0) {
+      if (section === 'languages') {
+        const hasLanguage = (mcs.languages ?? []).some((item) => cleanText(item.language));
+        return { section, score: hasLanguage ? 100 : 0, missing: [] };
+      }
+      return { section, score: 100, missing: [] };
+    }
 
     const missing = required
       .filter((rule) => !present(getByPath(mcs, rule.path)))
