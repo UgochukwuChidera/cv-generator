@@ -299,11 +299,11 @@ function RawTab() {
     <div>
       {err && <p style={{ fontSize: 12, color: 'var(--red)', marginBottom: 6 }}>{err}</p>}
       <textarea
-        value={raw} onChange={e => setRaw(e.target.value)} onBlur={handleBlur}
+        value={raw} onChange={e => setRaw(e.target.value)}
+        onBlur={e => { handleBlur(); e.target.style.borderColor = 'var(--border)'; }}
         rows={30}
         style={{ width: '100%', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '12px', fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-2)', outline: 'none', resize: 'none', lineHeight: 1.7 }}
         onFocus={e => (e.target.style.borderColor = 'var(--gold)')}
-        onBlur2={e => (e.target.style.borderColor = 'var(--border)')}
       />
     </div>
   );
