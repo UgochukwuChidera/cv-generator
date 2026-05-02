@@ -245,6 +245,18 @@ export default function EditorPage() {
                     className="btn-ghost"
                     onClick={() => {
                       const next = structuredClone(current);
+                      if (expIndex < next.experience.length - 1) {
+                        [next.experience[expIndex], next.experience[expIndex + 1]] = [next.experience[expIndex + 1], next.experience[expIndex]];
+                        commit(next, 'Experience reordered');
+                      }
+                    }}
+                  >
+                    Move down
+                  </button>
+                  <button
+                    className="btn-ghost"
+                    onClick={() => {
+                      const next = structuredClone(current);
                       next.experience.splice(expIndex, 1);
                       if (next.experience.length === 0) next.experience.push({ company: '', role: '', startDate: '', endDate: '', current: false, location: '', bullets: [] });
                       commit(next, 'Experience removed');

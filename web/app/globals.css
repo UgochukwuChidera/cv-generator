@@ -925,6 +925,14 @@ input, textarea, select {
   background: var(--accent-subtle);
 }
 
+.sl-score {
+  margin-left: auto;
+  font-size: 10px;
+  font-style: normal;
+  color: var(--text-tertiary);
+  font-weight: 600;
+}
+
 .ed-form {
   overflow: auto;
   padding: var(--space-6);
@@ -1053,6 +1061,34 @@ input, textarea, select {
   border-color: var(--accent);
   color: var(--accent);
   background: var(--accent-subtle);
+}
+
+.soft-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  border: none;
+  background: none;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  padding: 4px var(--space-2);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out-expo);
+}
+
+.soft-btn:hover {
+  color: var(--accent);
+  background: var(--accent-subtle);
+}
+
+.on-hi {
+  border-color: var(--border-default);
+  background: var(--bg-surface);
+}
+
+.pill {
+  border-radius: var(--radius-full);
 }
 
 /* Preview Panel */
