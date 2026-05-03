@@ -54,16 +54,22 @@ export default function ExperienceForm({
             <input className="field" value={active.location ?? ''} onChange={(e) => updateField('location', e.target.value)} />
           </label>
           <label>
-            <span>Dates</span>
+            <span>Start date</span>
             <input
               className="field"
-              value={`${active.startDate ?? ''} — ${active.current ? 'Present' : active.endDate ?? ''}`}
-              onChange={(e) => {
-                const [startDate, endDate] = e.target.value.split('—').map((x) => x.trim());
-                const next = [...mcs.experience];
-                next[0] = { ...next[0], startDate, endDate, current: endDate.toLowerCase() === 'present' };
-                onChange({ ...mcs, experience: next });
-              }}
+              placeholder="e.g. Jan 2020"
+              value={active.startDate ?? ''}
+              onChange={(e) => updateField('startDate', e.target.value)}
+            />
+          </label>
+          <label>
+            <span>End date</span>
+            <input
+              className="field"
+              placeholder="e.g. Dec 2021 or Present"
+              value={active.current ? 'Present' : (active.endDate ?? '')}
+              disabled={active.current}
+              onChange={(e) => updateField('endDate', e.target.value)}
             />
           </label>
         </div>

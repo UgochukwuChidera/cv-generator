@@ -11,15 +11,21 @@ type Particle = {
   vy: number;
   size: number;
   opacity: number;
+  clusterId: number; // which cluster this particle belongs to
 };
 
-// Monochrome palette — matches dark #0d1017 background
+// Force-graph parameters
 const FIELD_RADIUS = 160;
-const DENSITY_DIVISOR = 5500;
-const SPRING = 0.035;    // how strongly each point returns to origin
-const DAMPING = 0.82;    // velocity decay
-const REPULSE = 22;      // push force magnitude when mouse is near
-const ATTRACT = 0.18;    // lateral "compression" pull toward mouse column/row
+const DENSITY_DIVISOR = 2500;   // lower = more particles
+const MAX_PARTICLES = 280;       // cap for performance
+const SPRING = 0.028;            // how strongly each point returns to origin
+const DAMPING = 0.82;            // velocity decay
+const REPULSE = 22;              // push force magnitude when mouse is near
+const ATTRACT = 0.18;            // lateral "compression" pull toward mouse column/row
+const CLUSTER_PULL = 0.0012;     // gentle attraction toward cluster centre
+const EDGE_DIST = 110;           // max distance for drawing connection lines between particles
+const EDGE_OPACITY_MAX = 0.18;   // max opacity of connection edges
+const NUM_CLUSTERS = 6;          // number of loose cluster centres
 
 export default function ParticleCanvas() {
   const ref = useRef<HTMLCanvasElement>(null);
@@ -32,6 +38,7 @@ export default function ParticleCanvas() {
 
     let raf = 0;
     let particles: Particle[] = [];
+    let clusterCentres: { x: number; y: number }[] = [];
     const mouse = { x: -9999, y: -9999, active: false };
 
     const init = () => {
@@ -45,7 +52,13 @@ export default function ParticleCanvas() {
       canvas.style.height = `${H}px`;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-      const count = Math.max(40, Math.floor((W * H) / DENSITY_DIVISOR));
+      const count = Math.min(MAX_PARTICLES, Math.max(80, Math.floor((W * H) / DENSITY_DIVISOR)));
+
+      // Place cluster centres at scattered positions
+      clusterCentres = Array.from({ length: NUM_CLUSTERS }, (_, i) => ({
+        x: W * (0.15 + (i % 3) * 0.35 + (Math.random() - 0.5) * 0.18),
+        y: H * (0.2 + Math.floor(i / 3) * 0.55 + (Math.random() - 0.5) * 0.2),
+      }));
 
       // Build a loose grid so points have natural "home" positions
       const cols = Math.ceil(Math.sqrt(count * (W / H)));
@@ -58,6 +71,13 @@ export default function ParticleCanvas() {
           // Jitter each grid cell so it feels organic, not perfectly aligned
           const ox = (c / (cols - 1)) * W + (Math.random() - 0.5) * (W / cols) * 0.9;
           const oy = (r / (rows - 1)) * H + (Math.random() - 0.5) * (H / rows) * 0.9;
+          // Assign to nearest cluster centre
+          let clusterId = 0;
+          let bestDist = Infinity;
+          clusterCentres.forEach((cc, ci) => {
+            const d = Math.hypot(ox - cc.x, oy - cc.y);
+            if (d < bestDist) { bestDist = d; clusterId = ci; }
+          });
           particles.push({
             x: ox,
             y: oy,
@@ -65,8 +85,9 @@ export default function ParticleCanvas() {
             oy,
             vx: 0,
             vy: 0,
-            size: 0.8 + Math.random() * 1.4,
-            opacity: 0.18 + Math.random() * 0.32,
+            size: 0.9 + Math.random() * 1.5,
+            opacity: 0.22 + Math.random() * 0.35,
+            clusterId,
           });
         }
       }
@@ -77,10 +98,37 @@ export default function ParticleCanvas() {
       const H = window.innerHeight;
       ctx.clearRect(0, 0, W, H);
 
+      // Draw connection lines between close particles (force-graph edges)
+      for (let i = 0; i < particles.length; i++) {
+        const a = particles[i];
+        for (let j = i + 1; j < particles.length; j++) {
+          const b = particles[j];
+          const dx = b.x - a.x;
+          const dy = b.y - a.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < EDGE_DIST) {
+            const edgeOpacity = EDGE_OPACITY_MAX * (1 - dist / EDGE_DIST);
+            ctx.beginPath();
+            ctx.moveTo(a.x, a.y);
+            ctx.lineTo(b.x, b.y);
+            ctx.strokeStyle = `rgba(228, 231, 240, ${edgeOpacity})`;
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+          }
+        }
+      }
+
       for (const p of particles) {
         // Spring back toward origin
         p.vx += (p.ox - p.x) * SPRING;
         p.vy += (p.oy - p.y) * SPRING;
+
+        // Gentle pull toward this particle's cluster centre for denser grouping
+        const cc = clusterCentres[p.clusterId];
+        if (cc) {
+          p.vx += (cc.x - p.x) * CLUSTER_PULL;
+          p.vy += (cc.y - p.y) * CLUSTER_PULL;
+        }
 
         if (mouse.active) {
           const dx = p.x - mouse.x;

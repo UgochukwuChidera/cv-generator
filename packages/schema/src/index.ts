@@ -61,7 +61,7 @@ export const CoverLetterSchema = z.object({
 });
 
 export const MCSSchema = z.object({
-  personal: PersonalSchema.default({}),
+  personal: PersonalSchema.default({ name: '' }),
   summary: z.string().optional(),
   experience: z.array(ExperienceSchema).default([]),
   education: z.array(EducationSchema).default([]),
@@ -70,7 +70,7 @@ export const MCSSchema = z.object({
   languages: z.array(LanguageSchema).optional(),
   headshotPath: z.string().optional(),
   coverLetters: z.record(z.string(), CoverLetterSchema).optional(),
-  meta: MetaSchema.default({}),
+  meta: MetaSchema.default({ version: 1, updated_at: new Date().toISOString() }),
   history: z.array(z.unknown()).default([]),
 });
 

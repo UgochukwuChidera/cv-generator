@@ -4,15 +4,16 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { MCS } from '@nexus/schema';
 import { useNexusStore } from '@/lib/store';
 import type { MissingField } from '@/lib/mcs';
+import { assessMCSQuality, buildClarificationQuestions, normalizeMCS } from '@/lib/mcs';
 import { useShell } from '@/components/layout/ShellContext';
 import InputBar, { type UploadedFilePayload } from './InputBar';
 import MessageBubble, { type ChatMessageModel } from './MessageBubble';
 
 const CHIPS = [
+  'Build my CV from scratch',
   'Extract my profile from this text',
   'What fields are still missing?',
   'Help me improve my latest experience bullets',
-  'Prepare me for JD targeting',
 ];
 
 type ExtractResponse = {
@@ -123,11 +124,31 @@ export default function ChatPage() {
     setStatus('Clarification merged');
   }
 
+  function startScratch() {
+    const emptyMcs = normalizeMCS({});
+    setDraft(emptyMcs);
+    setMCS(emptyMcs);
+    const quality = assessMCSQuality(emptyMcs);
+    setMissing(quality.missingFields ?? []);
+    const questions = buildClarificationQuestions(quality);
+    pushAI(
+      "Let's build your CV from scratch! I'll guide you through each section step by step.",
+      { bullets: questions.slice(0, 1), toEditor: false }
+    );
+    setStatus('Starting fresh CV');
+  }
+
   async function send(raw?: string) {
     const text = (raw ?? input).trim();
     if (!text && !upload) return;
     if (!aiKey) {
       openApiKeyModal();
+      return;
+    }
+
+    // Intercept the "Build from scratch" chip to start guided mode without AI call
+    if (text === 'Build my CV from scratch') {
+      startScratch();
       return;
     }
 
