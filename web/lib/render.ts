@@ -18,9 +18,8 @@ function bullets(list: string[] | undefined): string {
    PROFESSIONAL
    Burgundy top bar · serif name · ruled sections
 ───────────────────────────────────────────── */
-function renderProfessional(mcs: MCS, maxExp: number, maxProj: number): string {
+function renderProfessional(mcs: MCS, maxExp: number, maxProj: number, accent: string, fontFamily: string): string {
   const p = mcs.personal;
-  const accent = '#b91c1c';
 
   const section = (label: string, content: string) =>
     content.trim()
@@ -76,7 +75,7 @@ function renderProfessional(mcs: MCS, maxExp: number, maxProj: number): string {
 <title>${esc(p.name || 'Resume')}</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:Georgia,'Times New Roman',serif;background:#f4f4f4;color:#1a1a1a;line-height:1.55}
+  body{font-family:${fontFamily};background:#f4f4f4;color:#1a1a1a;line-height:1.55}
   .page{max-width:780px;margin:32px auto;background:#fff;box-shadow:0 4px 24px rgba(0,0,0,.12)}
   .top-bar{height:6px;background:${accent}}
   .inner{padding:28px 32px}
@@ -119,9 +118,8 @@ function renderProfessional(mcs: MCS, maxExp: number, maxProj: number): string {
    MODERN
    Dark sidebar · avatar initials · blue accents
 ───────────────────────────────────────────── */
-function renderModern(mcs: MCS, maxExp: number, maxProj: number): string {
+function renderModern(mcs: MCS, maxExp: number, maxProj: number, accent: string, fontFamily: string): string {
   const p = mcs.personal;
-  const accent = '#2563eb';
   const sidebar = '#0f172a';
   const initials = (p.name ?? '')
     .split(' ')
@@ -184,7 +182,7 @@ function renderModern(mcs: MCS, maxExp: number, maxProj: number): string {
 <title>${esc(p.name || 'Resume')}</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Helvetica Neue',Arial,sans-serif;background:#e2e8f0;color:#1e293b;line-height:1.55}
+  body{font-family:${fontFamily};background:#e2e8f0;color:#1e293b;line-height:1.55}
   .page{max-width:820px;margin:32px auto;display:flex;background:#fff;box-shadow:0 4px 24px rgba(0,0,0,.15);min-height:600px}
   .sidebar{width:200px;background:${sidebar};padding:24px 16px;flex-shrink:0}
   .avatar{width:60px;height:60px;border-radius:50%;background:${accent};display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#fff;margin:0 auto 18px;letter-spacing:-1px}
@@ -235,7 +233,7 @@ function renderModern(mcs: MCS, maxExp: number, maxProj: number): string {
    ACADEMIC
    Serif throughout · centered header · heavy rules
 ───────────────────────────────────────────── */
-function renderAcademic(mcs: MCS, maxExp: number, maxProj: number): string {
+function renderAcademic(mcs: MCS, maxExp: number, maxProj: number, accent: string, fontFamily: string): string {
   const p = mcs.personal;
 
   const section = (label: string, content: string) =>
@@ -291,15 +289,15 @@ function renderAcademic(mcs: MCS, maxExp: number, maxProj: number): string {
 <title>${esc(p.name || 'CV')}</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Palatino Linotype','Book Antiqua',Palatino,serif;background:#f9f8f3;color:#111;line-height:1.6}
+  body{font-family:${fontFamily};background:#f9f8f3;color:#111;line-height:1.6}
   .page{max-width:780px;margin:32px auto;background:#fffef9;padding:36px 40px;box-shadow:0 2px 16px rgba(0,0,0,.1);border:1px solid #e8e6dc}
-  header{text-align:center;border-bottom:2px solid #222;padding-bottom:14px;margin-bottom:18px}
-  .name{font-size:28px;font-weight:700;letter-spacing:.03em}
+  header{text-align:center;border-bottom:2px solid ${accent};padding-bottom:14px;margin-bottom:18px}
+  .name{font-size:28px;font-weight:700;letter-spacing:.03em;color:${accent}}
   .title{font-size:13px;color:#444;margin-top:3px;font-style:italic}
   .contact{font-size:12px;color:#555;margin-top:5px}
   .links{font-size:11px;color:#777;margin-top:3px}
   section{margin-bottom:16px}
-  h3{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;border-bottom:1.5px solid #222;padding-bottom:3px;margin-bottom:9px}
+  h3{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:${accent};border-bottom:1.5px solid ${accent};padding-bottom:3px;margin-bottom:9px}
   .entry{margin-bottom:10px}
   .entry-head{display:flex;justify-content:space-between;align-items:baseline}
   .co{font-size:13px;font-weight:700}
@@ -333,7 +331,7 @@ function renderAcademic(mcs: MCS, maxExp: number, maxProj: number): string {
    MINIMAL
    Pure whitespace · date-left grid · no borders
 ───────────────────────────────────────────── */
-function renderMinimal(mcs: MCS, maxExp: number, maxProj: number): string {
+function renderMinimal(mcs: MCS, maxExp: number, maxProj: number, accent: string, fontFamily: string): string {
   const p = mcs.personal;
 
   const section = (label: string, content: string) =>
@@ -393,15 +391,15 @@ function renderMinimal(mcs: MCS, maxExp: number, maxProj: number): string {
 <title>${esc(p.name || 'Resume')}</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;background:#f7f7f5;color:#111;line-height:1.6}
+  body{font-family:${fontFamily};background:#f7f7f5;color:#111;line-height:1.6}
   .page{max-width:740px;margin:32px auto;background:#fff;padding:36px 40px}
   .header{margin-bottom:22px}
   .name{font-size:28px;font-weight:300;letter-spacing:-.3px;color:#000}
   .meta{display:flex;flex-wrap:wrap;gap:4px 18px;margin-top:6px}
   .meta span{font-size:11px;color:#888}
-  .meta span:first-child{color:#111;font-weight:500}
-  section{border-top:1px solid #e5e5e5;padding-top:14px;margin-bottom:14px}
-  .sl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.18em;color:#aaa;margin-bottom:10px}
+  .meta span:first-child{color:${accent};font-weight:500}
+  section{border-top:1px solid ${accent}33;padding-top:14px;margin-bottom:14px}
+  .sl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.18em;color:${accent};margin-bottom:10px}
   .row{display:grid;grid-template-columns:96px 1fr;gap:0 16px;margin-bottom:10px}
   .dcol{font-size:10px;color:#aaa;padding-top:2px;line-height:1.5;display:flex;flex-direction:column}
   .role{font-size:12.5px;font-weight:600;color:#000}
@@ -433,10 +431,9 @@ function renderMinimal(mcs: MCS, maxExp: number, maxProj: number): string {
    CREATIVE
    Violet hero · bold left bar · alternating skill chips
 ───────────────────────────────────────────── */
-function renderCreative(mcs: MCS, maxExp: number, maxProj: number): string {
+function renderCreative(mcs: MCS, maxExp: number, maxProj: number, accent: string, fontFamily: string): string {
   const p = mcs.personal;
-  const accent = '#7c3aed';
-  const light = '#ede9fe';
+  const light = `${accent}22`;
 
   const section = (label: string, content: string) =>
     content.trim()
@@ -486,36 +483,36 @@ function renderCreative(mcs: MCS, maxExp: number, maxProj: number): string {
 <title>${esc(p.name || 'Resume')}</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Helvetica Neue',Arial,sans-serif;background:#f5f3ff;color:#111;line-height:1.55}
-  .page{max-width:780px;margin:32px auto;background:#fff;box-shadow:0 4px 24px rgba(124,58,237,.15);border-left:7px solid ${accent}}
+  body{font-family:${fontFamily};background:#f5f5f5;color:#111;line-height:1.55}
+  .page{max-width:780px;margin:32px auto;background:#fff;box-shadow:0 4px 24px rgba(0,0,0,.12);border-left:7px solid ${accent}}
   .hero{background:${light};padding:24px 24px 20px}
-  .name{font-size:30px;font-weight:800;letter-spacing:-1px;color:#1e0a4e;line-height:1.1}
+  .name{font-size:30px;font-weight:800;letter-spacing:-1px;color:#111;line-height:1.1}
   .title-badge{display:inline-block;background:${accent};color:#fff;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;padding:3px 12px;border-radius:999px;margin-top:8px}
-  .contacts{font-size:10.5px;color:#6d28d9;margin-top:10px;display:flex;flex-wrap:wrap;gap:4px 14px}
+  .contacts{font-size:10.5px;color:${accent};margin-top:10px;display:flex;flex-wrap:wrap;gap:4px 14px}
   .inner{padding:18px 24px}
-  .summary{font-size:11px;color:#4c1d95;line-height:1.75;background:#faf5ff;padding:9px 13px;border-radius:6px;border-left:3px solid ${accent};margin-bottom:16px}
+  .summary{font-size:11px;color:#333;line-height:1.75;background:${light};padding:9px 13px;border-radius:6px;border-left:3px solid ${accent};margin-bottom:16px}
   section{margin-bottom:16px}
   h3{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.14em;color:${accent};display:flex;align-items:center;gap:8px;margin-bottom:9px}
   .rule{display:inline-block;width:18px;height:2px;background:${accent};border-radius:1px;flex-shrink:0}
   .entry{margin-bottom:12px}
-  .sep{padding-bottom:11px;border-bottom:1px dashed #e9d5ff}
+  .sep{padding-bottom:11px;border-bottom:1px dashed ${accent}44}
   .entry-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px}
-  .role{font-size:12.5px;font-weight:700;color:#1e0a4e}
+  .role{font-size:12.5px;font-weight:700;color:#111}
   .badge{display:inline-block;background:${light};color:${accent};border-radius:999px;padding:1px 9px;font-size:9.5px;font-weight:600;margin-left:8px}
-  .date{font-size:9.5px;color:#a78bfa;white-space:nowrap;margin-left:8px}
+  .date{font-size:9.5px;color:${accent};opacity:.7;white-space:nowrap;margin-left:8px}
   ul{margin:0 0 0 14px;font-size:10.5px;color:#374151}
   li{margin-bottom:2px}
   .two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-  .chip{display:inline-block;border-radius:4px;padding:2px 8px;font-size:9.5px;font-weight:600;margin-right:5px;margin-bottom:5px;background:#f5f3ff;color:#5b21b6}
+  .chip{display:inline-block;border-radius:4px;padding:2px 8px;font-size:9.5px;font-weight:600;margin-right:5px;margin-bottom:5px;background:#f5f5f5;color:${accent}}
   .chip-acc{background:${accent};color:#fff}
-  .chip-light{background:${light};color:#5b21b6}
-  .proj{padding:8px 11px;background:#faf5ff;border-radius:6px;border-left:3px solid ${accent};margin-bottom:8px}
-  .pDesc{font-size:10.5px;color:#6d28d9;margin-top:1px}
+  .chip-light{background:${light};color:${accent}}
+  .proj{padding:8px 11px;background:${light};border-radius:6px;border-left:3px solid ${accent};margin-bottom:8px}
+  .pDesc{font-size:10.5px;color:${accent};margin-top:1px}
   .tech{margin-top:4px}
   .pill{display:inline-block;border:1px solid ${accent}44;border-radius:999px;padding:1px 8px;font-size:10px;color:${accent};margin-right:4px;margin-bottom:2px}
   .edu-entry{margin-bottom:7px}
-  .edu-inst{font-size:12px;font-weight:700;color:#1e0a4e}
-  .edu-deg{font-size:10.5px;color:#6d28d9}
+  .edu-inst{font-size:12px;font-weight:700;color:#111}
+  .edu-deg{font-size:10.5px;color:${accent}}
 </style>
 </head>
 <body>
@@ -546,16 +543,31 @@ function renderCreative(mcs: MCS, maxExp: number, maxProj: number): string {
 export function mcsToHtml(
   mcs: MCS,
   theme: string = 'Professional',
-  documentType: 'resume' | 'cv' = 'resume'
+  documentType: 'resume' | 'cv' = 'resume',
+  accent?: string,
+  fontFamily?: string,
 ): string {
   const maxExp = documentType === 'cv' ? 8 : 4;
   const maxProj = documentType === 'cv' ? 5 : 2;
 
+  const resolvedAccent = accent ?? (
+    theme === 'Modern' ? '#2563eb'
+    : theme === 'Academic' ? '#3a3a3a'
+    : theme === 'Minimal' ? '#111111'
+    : theme === 'Creative' ? '#7c3aed'
+    : '#b91c1c'
+  );
+  const resolvedFont = fontFamily ?? (
+    theme === 'Academic' ? `'Palatino Linotype','Book Antiqua',Palatino,serif`
+    : theme === 'Professional' ? `Georgia,'Times New Roman',serif`
+    : `'Helvetica Neue',Arial,sans-serif`
+  );
+
   switch (theme) {
-    case 'Modern':   return renderModern(mcs, maxExp, maxProj);
-    case 'Academic': return renderAcademic(mcs, maxExp, maxProj);
-    case 'Minimal':  return renderMinimal(mcs, maxExp, maxProj);
-    case 'Creative': return renderCreative(mcs, maxExp, maxProj);
-    default:         return renderProfessional(mcs, maxExp, maxProj);
+    case 'Modern':   return renderModern(mcs, maxExp, maxProj, resolvedAccent, resolvedFont);
+    case 'Academic': return renderAcademic(mcs, maxExp, maxProj, resolvedAccent, resolvedFont);
+    case 'Minimal':  return renderMinimal(mcs, maxExp, maxProj, resolvedAccent, resolvedFont);
+    case 'Creative': return renderCreative(mcs, maxExp, maxProj, resolvedAccent, resolvedFont);
+    default:         return renderProfessional(mcs, maxExp, maxProj, resolvedAccent, resolvedFont);
   }
 }

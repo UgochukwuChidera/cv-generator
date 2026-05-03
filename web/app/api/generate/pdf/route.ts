@@ -18,15 +18,20 @@ const baseStyles = StyleSheet.create({
 
 export async function POST(req: NextRequest) {
   try {
-    const { mcs, theme, documentType } = (await req.json()) as { mcs?: unknown; theme?: string; documentType?: 'resume' | 'cv' };
+    const { mcs, theme, documentType, accent: accentParam, fontFamily: fontFamilyParam } = (await req.json()) as { mcs?: unknown; theme?: string; documentType?: 'resume' | 'cv'; accent?: string; fontFamily?: string };
     if (!mcs) return NextResponse.json({ error: 'mcs required' }, { status: 400 });
 
     const data = normalizeMCS(mcs);
-    const accent = theme === 'Modern' ? '#2d6cdf' : theme === 'Creative' ? '#8a3ffc' : theme === 'Academic' ? '#2f2f2f' : theme === 'Minimal' ? '#111111' : '#ff4d6a';
+    const accent = accentParam ?? (theme === 'Modern' ? '#2d6cdf' : theme === 'Creative' ? '#8a3ffc' : theme === 'Academic' ? '#2f2f2f' : theme === 'Minimal' ? '#111111' : '#ff4d6a');
+    // Map web font-family strings to react-pdf built-in fonts
+    const pdfFont = fontFamilyParam?.includes('Times') || fontFamilyParam?.includes('serif') ? 'Times-Roman'
+      : fontFamilyParam?.includes('Mono') || fontFamilyParam?.includes('Consolas') ? 'Courier'
+      : 'Helvetica';
     const maxExperience = documentType === 'cv' ? 8 : 4;
     const maxProjects = documentType === 'cv' ? 4 : 2;
     const styles = StyleSheet.create({
       ...baseStyles,
+      page: { ...baseStyles.page, fontFamily: pdfFont },
       heading: { ...baseStyles.heading, color: accent },
       name: { ...baseStyles.name, color: accent },
     });

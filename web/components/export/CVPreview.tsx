@@ -38,13 +38,12 @@ function Pill({ text, accent }: { text: string; accent: string }) {
    PROFESSIONAL — burgundy top bar, serif name,
    ruled section headers, tight ATS layout
 ───────────────────────────────────────────── */
-function ProfessionalTemplate({ mcs, maxExp, maxProj }: { mcs: MCS; maxExp: number; maxProj: number }) {
+function ProfessionalTemplate({ mcs, maxExp, maxProj, accent, fontFamily }: { mcs: MCS; maxExp: number; maxProj: number; accent: string; fontFamily: string }) {
   const p = mcs.personal;
-  const accent = '#b91c1c';
   return (
     <div
       style={{
-        fontFamily: `'Georgia', 'Times New Roman', serif`,
+        fontFamily,
         background: '#fff',
         color: '#1a1a1a',
         lineHeight: 1.55,
@@ -153,9 +152,8 @@ function ProfessionalTemplate({ mcs, maxExp, maxProj }: { mcs: MCS; maxExp: numb
    MODERN — dark left sidebar with initials +
    contact, white right content area, blue accents
 ───────────────────────────────────────────── */
-function ModernTemplate({ mcs, maxExp, maxProj }: { mcs: MCS; maxExp: number; maxProj: number }) {
+function ModernTemplate({ mcs, maxExp, maxProj, accent, fontFamily }: { mcs: MCS; maxExp: number; maxProj: number; accent: string; fontFamily: string }) {
   const p = mcs.personal;
-  const accent = '#2563eb';
   const sidebar = '#0f172a';
   const initials = (p.name ?? '')
     .split(' ')
@@ -167,7 +165,7 @@ function ModernTemplate({ mcs, maxExp, maxProj }: { mcs: MCS; maxExp: number; ma
   return (
     <div
       style={{
-        fontFamily: `'Helvetica Neue', Arial, sans-serif`,
+        fontFamily,
         display: 'flex',
         background: '#fff',
         color: '#1e293b',
@@ -326,12 +324,12 @@ function ModernTemplate({ mcs, maxExp, maxProj }: { mcs: MCS; maxExp: number; ma
    ACADEMIC — dense CV-style, serif throughout,
    institution-first layout, ruled sections
 ───────────────────────────────────────────── */
-function AcademicTemplate({ mcs, maxExp, maxProj }: { mcs: MCS; maxExp: number; maxProj: number }) {
+function AcademicTemplate({ mcs, maxExp, maxProj, accent, fontFamily }: { mcs: MCS; maxExp: number; maxProj: number; accent: string; fontFamily: string }) {
   const p = mcs.personal;
   return (
     <div
       style={{
-        fontFamily: `'Palatino Linotype', 'Book Antiqua', Palatino, serif`,
+        fontFamily,
         background: '#fffef9',
         color: '#111',
         lineHeight: 1.6,
@@ -339,8 +337,8 @@ function AcademicTemplate({ mcs, maxExp, maxProj }: { mcs: MCS; maxExp: number; 
       }}
     >
       {/* Header — centered */}
-      <div style={{ textAlign: 'center', marginBottom: 16, borderBottom: '2px solid #222', paddingBottom: 12 }}>
-        <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: '0.03em' }}>
+      <div style={{ textAlign: 'center', marginBottom: 16, borderBottom: `2px solid ${accent}`, paddingBottom: 12 }}>
+        <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: '0.03em', color: accent }}>
           {esc(p.name) || 'Your Name'}
         </div>
         {p.title && <div style={{ fontSize: 12, color: '#444', marginTop: 2, fontStyle: 'italic' }}>{p.title}</div>}
@@ -355,13 +353,13 @@ function AcademicTemplate({ mcs, maxExp, maxProj }: { mcs: MCS; maxExp: number; 
       </div>
 
       {mcs.summary && (
-        <AcademicSection label="Research Interests / Summary">
+        <AcademicSection label="Research Interests / Summary" accent={accent}>
           <p style={{ margin: 0, fontSize: 11.5 }}>{mcs.summary}</p>
         </AcademicSection>
       )}
 
       {mcs.education.length > 0 && (
-        <AcademicSection label="Education">
+        <AcademicSection label="Education" accent={accent}>
           {mcs.education.map((e, i) => (
             <div key={i} style={{ marginBottom: 8 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -381,7 +379,7 @@ function AcademicTemplate({ mcs, maxExp, maxProj }: { mcs: MCS; maxExp: number; 
       )}
 
       {mcs.experience.length > 0 && (
-        <AcademicSection label="Professional Experience">
+        <AcademicSection label="Professional Experience" accent={accent}>
           {mcs.experience.slice(0, maxExp).map((e, i) => (
             <div key={i} style={{ marginBottom: 9 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -406,7 +404,7 @@ function AcademicTemplate({ mcs, maxExp, maxProj }: { mcs: MCS; maxExp: number; 
       )}
 
       {mcs.skills.length > 0 && (
-        <AcademicSection label="Skills &amp; Expertise">
+        <AcademicSection label="Skills &amp; Expertise" accent={accent}>
           <div style={{ fontSize: 11.5, lineHeight: 1.8 }}>
             {mcs.skills.map((s) => s.name).join(' · ')}
           </div>
@@ -414,7 +412,7 @@ function AcademicTemplate({ mcs, maxExp, maxProj }: { mcs: MCS; maxExp: number; 
       )}
 
       {(mcs.projects ?? []).length > 0 && (
-        <AcademicSection label="Selected Projects / Publications">
+        <AcademicSection label="Selected Projects / Publications" accent={accent}>
           {(mcs.projects ?? []).slice(0, maxProj).map((proj, i) => (
             <div key={i} style={{ marginBottom: 7 }}>
               <span style={{ fontSize: 12, fontWeight: 700 }}>{esc(proj.name)}</span>
@@ -428,7 +426,7 @@ function AcademicTemplate({ mcs, maxExp, maxProj }: { mcs: MCS; maxExp: number; 
       )}
 
       {(mcs.languages ?? []).length > 0 && (
-        <AcademicSection label="Languages">
+        <AcademicSection label="Languages" accent={accent}>
           <div style={{ fontSize: 11.5 }}>
             {(mcs.languages ?? []).map((l) => [l.language, l.proficiency].filter(Boolean).join(' (')).join(')  ·  ')}
           </div>
@@ -442,12 +440,12 @@ function AcademicTemplate({ mcs, maxExp, maxProj }: { mcs: MCS; maxExp: number; 
    MINIMAL — pure whitespace grid, thin rules,
    no ornamentation, everything in proportion
 ───────────────────────────────────────────── */
-function MinimalTemplate({ mcs, maxExp, maxProj }: { mcs: MCS; maxExp: number; maxProj: number }) {
+function MinimalTemplate({ mcs, maxExp, maxProj, accent, fontFamily }: { mcs: MCS; maxExp: number; maxProj: number; accent: string; fontFamily: string }) {
   const p = mcs.personal;
   return (
     <div
       style={{
-        fontFamily: `'Helvetica Neue', Helvetica, Arial, sans-serif`,
+        fontFamily,
         background: '#fff',
         color: '#111',
         padding: '22px 24px',
@@ -461,7 +459,7 @@ function MinimalTemplate({ mcs, maxExp, maxProj }: { mcs: MCS; maxExp: number; m
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px', marginTop: 5 }}>
           {[p.title, p.email, p.phone, p.location].filter(Boolean).map((item, i) => (
-            <span key={i} style={{ fontSize: 10.5, color: i === 0 ? '#111' : '#888' }}>
+            <span key={i} style={{ fontSize: 10.5, color: i === 0 ? accent : '#888' }}>
               {item}
             </span>
           ))}
@@ -469,13 +467,13 @@ function MinimalTemplate({ mcs, maxExp, maxProj }: { mcs: MCS; maxExp: number; m
       </div>
 
       {mcs.summary && (
-        <div style={{ borderTop: '1px solid #eee', paddingTop: 12, marginBottom: 14 }}>
+        <div style={{ borderTop: `1px solid ${accent}33`, paddingTop: 12, marginBottom: 14 }}>
           <p style={{ margin: 0, fontSize: 11, color: '#555', lineHeight: 1.75 }}>{mcs.summary}</p>
         </div>
       )}
 
       {mcs.experience.length > 0 && (
-        <MinimalSection label="Experience">
+        <MinimalSection label="Experience" accent={accent}>
           {mcs.experience.slice(0, maxExp).map((e, i) => (
             <div key={i} style={{ display: 'grid', gridTemplateColumns: '90px 1fr', gap: '0 14px', marginBottom: 10 }}>
               <div style={{ fontSize: 10, color: '#999', paddingTop: 1, lineHeight: 1.5 }}>
@@ -501,7 +499,7 @@ function MinimalTemplate({ mcs, maxExp, maxProj }: { mcs: MCS; maxExp: number; m
       )}
 
       {mcs.education.length > 0 && (
-        <MinimalSection label="Education">
+        <MinimalSection label="Education" accent={accent}>
           {mcs.education.map((e, i) => (
             <div key={i} style={{ display: 'grid', gridTemplateColumns: '90px 1fr', gap: '0 14px', marginBottom: 6 }}>
               <div style={{ fontSize: 10, color: '#999' }}>{e.endDate || e.startDate}</div>
@@ -517,7 +515,7 @@ function MinimalTemplate({ mcs, maxExp, maxProj }: { mcs: MCS; maxExp: number; m
       )}
 
       {mcs.skills.length > 0 && (
-        <MinimalSection label="Skills">
+        <MinimalSection label="Skills" accent={accent}>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px 0' }}>
             {mcs.skills.map((s, i) => (
               <span key={i} style={{ fontSize: 11, color: '#333', marginRight: 14 }}>{s.name}</span>
@@ -527,7 +525,7 @@ function MinimalTemplate({ mcs, maxExp, maxProj }: { mcs: MCS; maxExp: number; m
       )}
 
       {(mcs.projects ?? []).length > 0 && (
-        <MinimalSection label="Projects">
+        <MinimalSection label="Projects" accent={accent}>
           {(mcs.projects ?? []).slice(0, maxProj).map((proj, i) => (
             <div key={i} style={{ display: 'grid', gridTemplateColumns: '90px 1fr', gap: '0 14px', marginBottom: 6 }}>
               <div />
@@ -549,15 +547,14 @@ function MinimalTemplate({ mcs, maxExp, maxProj }: { mcs: MCS; maxExp: number; m
    CREATIVE — bold violet left bar, oversized
    name, asymmetric layout, tag-pill skills
 ───────────────────────────────────────────── */
-function CreativeTemplate({ mcs, maxExp, maxProj }: { mcs: MCS; maxExp: number; maxProj: number }) {
+function CreativeTemplate({ mcs, maxExp, maxProj, accent, fontFamily }: { mcs: MCS; maxExp: number; maxProj: number; accent: string; fontFamily: string }) {
   const p = mcs.personal;
-  const accent = '#7c3aed';
-  const light = '#ede9fe';
+  const light = `${accent}22`;
 
   return (
     <div
       style={{
-        fontFamily: `'Helvetica Neue', Arial, sans-serif`,
+        fontFamily,
         background: '#fff',
         color: '#111',
         lineHeight: 1.55,
@@ -566,7 +563,7 @@ function CreativeTemplate({ mcs, maxExp, maxProj }: { mcs: MCS; maxExp: number; 
     >
       {/* Hero header */}
       <div style={{ background: light, padding: '20px 20px 16px 20px' }}>
-        <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-1px', color: '#1e0a4e', lineHeight: 1.1 }}>
+        <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-1px', color: '#111', lineHeight: 1.1 }}>
           {esc(p.name) || 'Your Name'}
         </div>
         {p.title && (
@@ -587,7 +584,7 @@ function CreativeTemplate({ mcs, maxExp, maxProj }: { mcs: MCS; maxExp: number; 
             {p.title}
           </div>
         )}
-        <div style={{ fontSize: 10.5, color: '#6d28d9', marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: '3px 12px' }}>
+        <div style={{ fontSize: 10.5, color: accent, marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: '3px 12px' }}>
           {[p.email, p.phone, p.location, p.linkedin, p.github].filter(Boolean).map((item, i) => (
             <span key={i}>{item}</span>
           ))}
@@ -600,9 +597,9 @@ function CreativeTemplate({ mcs, maxExp, maxProj }: { mcs: MCS; maxExp: number; 
             style={{
               margin: '0 0 14px',
               fontSize: 11,
-              color: '#4c1d95',
+              color: '#333',
               lineHeight: 1.75,
-              background: '#faf5ff',
+              background: light,
               padding: '8px 12px',
               borderRadius: 6,
               borderLeft: `3px solid ${accent}`,
@@ -615,10 +612,10 @@ function CreativeTemplate({ mcs, maxExp, maxProj }: { mcs: MCS; maxExp: number; 
         {mcs.experience.length > 0 && (
           <CreativeSection label="Experience" accent={accent}>
             {mcs.experience.slice(0, maxExp).map((e, i) => (
-              <div key={i} style={{ marginBottom: 11, paddingBottom: 11, borderBottom: i < mcs.experience.slice(0, maxExp).length - 1 ? '1px dashed #e9d5ff' : 'none' }}>
+              <div key={i} style={{ marginBottom: 11, paddingBottom: 11, borderBottom: i < mcs.experience.slice(0, maxExp).length - 1 ? `1px dashed ${accent}44` : 'none' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: '#1e0a4e' }}>{esc(e.role)}</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: '#111' }}>{esc(e.role)}</span>
                     <span
                       style={{
                         fontSize: 9.5,
@@ -633,7 +630,7 @@ function CreativeTemplate({ mcs, maxExp, maxProj }: { mcs: MCS; maxExp: number; 
                       {esc(e.company)}
                     </span>
                   </div>
-                  <span style={{ fontSize: 9.5, color: '#a78bfa', whiteSpace: 'nowrap', marginLeft: 8 }}>
+                  <span style={{ fontSize: 9.5, color: accent, opacity: 0.7, whiteSpace: 'nowrap', marginLeft: 8 }}>
                     {[e.startDate, e.current ? 'Now' : e.endDate].filter(Boolean).join(' → ')}
                   </span>
                 </div>
@@ -654,8 +651,8 @@ function CreativeTemplate({ mcs, maxExp, maxProj }: { mcs: MCS; maxExp: number; 
             <CreativeSection label="Education" accent={accent}>
               {mcs.education.map((e, i) => (
                 <div key={i} style={{ marginBottom: 6 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#1e0a4e' }}>{esc(e.institution)}</div>
-                  <div style={{ fontSize: 10, color: '#6d28d9' }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#111' }}>{esc(e.institution)}</div>
+                  <div style={{ fontSize: 10, color: accent }}>
                     {[e.degree, e.field].filter(Boolean).join(' in ')}
                     {e.endDate ? ` · ${e.endDate}` : ''}
                   </div>
@@ -672,8 +669,8 @@ function CreativeTemplate({ mcs, maxExp, maxProj }: { mcs: MCS; maxExp: number; 
                     key={i}
                     style={{
                       display: 'inline-block',
-                      background: i % 3 === 0 ? accent : i % 3 === 1 ? light : '#f5f3ff',
-                      color: i % 3 === 0 ? '#fff' : '#5b21b6',
+                      background: i % 3 === 0 ? accent : i % 3 === 1 ? light : '#f5f5f5',
+                      color: i % 3 === 0 ? '#fff' : accent,
                       borderRadius: 4,
                       padding: '2px 8px',
                       fontSize: 9.5,
@@ -698,14 +695,14 @@ function CreativeTemplate({ mcs, maxExp, maxProj }: { mcs: MCS; maxExp: number; 
                 style={{
                   marginBottom: 8,
                   padding: '7px 10px',
-                  background: '#faf5ff',
+                  background: light,
                   borderRadius: 6,
                   borderLeft: `3px solid ${accent}`,
                 }}
               >
-                <div style={{ fontSize: 11.5, fontWeight: 700, color: '#1e0a4e' }}>{esc(proj.name)}</div>
+                <div style={{ fontSize: 11.5, fontWeight: 700, color: '#111' }}>{esc(proj.name)}</div>
                 {proj.description && (
-                  <div style={{ fontSize: 10.5, color: '#6d28d9', marginTop: 1 }}>{proj.description}</div>
+                  <div style={{ fontSize: 10.5, color: accent, marginTop: 1 }}>{proj.description}</div>
                 )}
                 {(proj.tech ?? []).length > 0 && (
                   <div style={{ marginTop: 4 }}>
@@ -767,7 +764,7 @@ function ModernSection({ label, accent, children }: { label: string; accent: str
   );
 }
 
-function AcademicSection({ label, children }: { label: string; children: React.ReactNode }) {
+function AcademicSection({ label, accent, children }: { label: string; accent: string; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: 13 }}>
       <div
@@ -776,7 +773,8 @@ function AcademicSection({ label, children }: { label: string; children: React.R
           fontWeight: 700,
           textTransform: 'uppercase',
           letterSpacing: '0.1em',
-          borderBottom: '1.5px solid #222',
+          color: accent,
+          borderBottom: `1.5px solid ${accent}`,
           paddingBottom: 3,
           marginBottom: 7,
         }}
@@ -788,16 +786,16 @@ function AcademicSection({ label, children }: { label: string; children: React.R
   );
 }
 
-function MinimalSection({ label, children }: { label: string; children: React.ReactNode }) {
+function MinimalSection({ label, accent, children }: { label: string; accent: string; children: React.ReactNode }) {
   return (
-    <div style={{ borderTop: '1px solid #e5e5e5', paddingTop: 12, marginBottom: 12 }}>
+    <div style={{ borderTop: `1px solid ${accent}33`, paddingTop: 12, marginBottom: 12 }}>
       <div
         style={{
           fontSize: 9,
           fontWeight: 700,
           textTransform: 'uppercase',
           letterSpacing: '0.16em',
-          color: '#aaa',
+          color: accent,
           marginBottom: 8,
         }}
       >
@@ -862,7 +860,7 @@ function SidebarSection({ label, children, light }: { label: string; children: R
 
 function SidebarItem({ text, accent }: { text: string; accent: string }) {
   return (
-    <div style={{ fontSize: 9.5, color: '#94a3b8', marginBottom: 4, wordBreak: 'break-all', lineHeight: 1.4 }}>
+    <div style={{ fontSize: 9.5, color: '#94a3b8', marginBottom: 4, wordBreak: 'break-all', lineHeight: 1.4, borderBottom: `1px solid ${accent}22`, paddingBottom: 3 }}>
       {text}
     </div>
   );
@@ -959,11 +957,11 @@ export default function CVPreview({
 
   const template = () => {
     switch (theme) {
-      case 'Modern':    return <ModernTemplate mcs={mcs} maxExp={maxExp} maxProj={maxProj} />;
-      case 'Academic':  return <AcademicTemplate mcs={mcs} maxExp={maxExp} maxProj={maxProj} />;
-      case 'Minimal':   return <MinimalTemplate mcs={mcs} maxExp={maxExp} maxProj={maxProj} />;
-      case 'Creative':  return <CreativeTemplate mcs={mcs} maxExp={maxExp} maxProj={maxProj} />;
-      default:          return <ProfessionalTemplate mcs={mcs} maxExp={maxExp} maxProj={maxProj} />;
+      case 'Modern':    return <ModernTemplate mcs={mcs} maxExp={maxExp} maxProj={maxProj} accent={accent} fontFamily={fontFamily} />;
+      case 'Academic':  return <AcademicTemplate mcs={mcs} maxExp={maxExp} maxProj={maxProj} accent={accent} fontFamily={fontFamily} />;
+      case 'Minimal':   return <MinimalTemplate mcs={mcs} maxExp={maxExp} maxProj={maxProj} accent={accent} fontFamily={fontFamily} />;
+      case 'Creative':  return <CreativeTemplate mcs={mcs} maxExp={maxExp} maxProj={maxProj} accent={accent} fontFamily={fontFamily} />;
+      default:          return <ProfessionalTemplate mcs={mcs} maxExp={maxExp} maxProj={maxProj} accent={accent} fontFamily={fontFamily} />;
     }
   };
 

@@ -95,12 +95,12 @@ export default function ExportPage() {
         return;
       }
       if (format === 'PDF') {
-        await fetchAndDownload('/api/generate/pdf', { mcs, theme, documentType }, 'resume.pdf');
+        await fetchAndDownload('/api/generate/pdf', { mcs, theme, documentType, accent, fontFamily }, 'resume.pdf');
       } else if (format === 'DOCX') {
-        await fetchAndDownload('/api/generate/docx', { mcs, theme, documentType }, 'resume.docx');
+        await fetchAndDownload('/api/generate/docx', { mcs, theme, documentType, accent, fontFamily }, 'resume.docx');
       } else {
         const ext = format.toLowerCase();
-        await fetchAndDownload('/api/generate/export', { mcs, theme, format, documentType }, `resume.${ext}`);
+        await fetchAndDownload('/api/generate/export', { mcs, theme, format, documentType, accent, fontFamily }, `resume.${ext}`);
       }
       setStatus(`Prepared ${documentType.toUpperCase()} ${format} export`);
     } catch {
@@ -142,6 +142,13 @@ export default function ExportPage() {
           {['#ff4d6a', '#4dd994', '#6b9fff', '#ffcc55', '#b58cff'].map((color) => (
             <button key={color} className={`accent-dot ${accent === color ? 'on' : ''}`} style={{ background: color }} onClick={() => setAccent(color)} />
           ))}
+          <input
+            type="color"
+            value={accent}
+            onChange={(e) => setAccent(e.target.value)}
+            title="Custom accent colour"
+            style={{ width: 22, height: 22, padding: 1, border: '1px solid var(--border)', borderRadius: '50%', cursor: 'pointer', background: 'none' }}
+          />
         </div>
         <h4>Format</h4>
         <FormatPicker value={format} onChange={setFormat} />

@@ -15,16 +15,16 @@ type Particle = {
 };
 
 // Force-graph parameters
-const FIELD_RADIUS = 160;
-const DENSITY_DIVISOR = 2500;   // lower = more particles
-const MAX_PARTICLES = 280;       // cap for performance
-const SPRING = 0.028;            // how strongly each point returns to origin
-const DAMPING = 0.82;            // velocity decay
-const REPULSE = 22;              // push force magnitude when mouse is near
-const ATTRACT = 0.18;            // lateral "compression" pull toward mouse column/row
-const CLUSTER_PULL = 0.0012;     // gentle attraction toward cluster centre
-const EDGE_DIST = 110;           // max distance for drawing connection lines between particles
-const EDGE_OPACITY_MAX = 0.18;   // max opacity of connection edges
+const FIELD_RADIUS = 220;
+const DENSITY_DIVISOR = 1600;   // lower = more particles
+const MAX_PARTICLES = 420;       // cap for performance
+const SPRING = 0.012;            // how strongly each point returns to origin
+const DAMPING = 0.86;            // velocity decay
+const REPULSE = 38;              // push force magnitude when mouse is near
+const ATTRACT = 0.28;            // lateral "compression" pull toward mouse column/row
+const CLUSTER_PULL = 0.0008;     // gentle attraction toward cluster centre
+const EDGE_DIST = 140;           // max distance for drawing connection lines between particles
+const EDGE_OPACITY_MAX = 0.22;   // max opacity of connection edges
 const NUM_CLUSTERS = 6;          // number of loose cluster centres
 
 export default function ParticleCanvas() {
@@ -85,8 +85,8 @@ export default function ParticleCanvas() {
             oy,
             vx: 0,
             vy: 0,
-            size: 0.9 + Math.random() * 1.5,
-            opacity: 0.22 + Math.random() * 0.35,
+            size: 1.4 + Math.random() * 2.4,
+            opacity: 0.28 + Math.random() * 0.42,
             clusterId,
           });
         }
@@ -141,6 +141,12 @@ export default function ParticleCanvas() {
             const push = (1 - norm) * (1 - norm);      // quadratic falloff
             p.vx += (dx / dist) * push * REPULSE;
             p.vy += (dy / dist) * push * REPULSE;
+
+            // Vortex / swirl — tangential force creates a field-like curl
+            // Perpendicular to the radial direction (dx, dy) → tangent is (-dy, dx)
+            const swirlStrength = (1 - norm) * 4.5;
+            p.vx += (-dy / dist) * swirlStrength;
+            p.vy += (dx / dist) * swirlStrength;
 
             // Gentle lateral compression — particles on the edge of the field
             // get a tiny pull toward the cursor axis, creating a "lens" look
