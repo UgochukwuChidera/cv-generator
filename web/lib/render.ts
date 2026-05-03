@@ -540,6 +540,24 @@ function renderCreative(mcs: MCS, maxExp: number, maxProj: number, accent: strin
 /* ─────────────────────────────────────────────
    Main export
 ───────────────────────────────────────────── */
+/** Sanitize a CSS colour value to only allow safe hex, rgb/rgba, and named colours. */
+function sanitizeCssColor(value: string): string | undefined {
+  // Allow: #abc, #aabbcc, #aabbccdd, rgb(...), rgba(...), hsl(...), named words
+  if (/^(#[0-9a-fA-F]{3,8}|rgb\([^)]*\)|rgba\([^)]*\)|hsl\([^)]*\)|hsla\([^)]*\)|[a-zA-Z]+)$/.test(value.trim())) {
+    return value.trim();
+  }
+  return undefined;
+}
+
+/** Sanitize a font-family CSS value — strip characters that cannot appear in font stacks. */
+function sanitizeFontFamily(value: string): string | undefined {
+  // Only allow alphanumerics, spaces, commas, quotes, hyphens, and dots
+  if (/^[\w\s,'"\-.,]+$/.test(value)) {
+    return value;
+  }
+  return undefined;
+}
+
 export function mcsToHtml(
   mcs: MCS,
   theme: string = 'Professional',
@@ -550,14 +568,17 @@ export function mcsToHtml(
   const maxExp = documentType === 'cv' ? 8 : 4;
   const maxProj = documentType === 'cv' ? 5 : 2;
 
-  const resolvedAccent = accent ?? (
+  const safeAccent = accent ? sanitizeCssColor(accent) : undefined;
+  const safeFontFamily = fontFamily ? sanitizeFontFamily(fontFamily) : undefined;
+
+  const resolvedAccent = safeAccent ?? (
     theme === 'Modern' ? '#2563eb'
     : theme === 'Academic' ? '#3a3a3a'
     : theme === 'Minimal' ? '#111111'
     : theme === 'Creative' ? '#7c3aed'
     : '#b91c1c'
   );
-  const resolvedFont = fontFamily ?? (
+  const resolvedFont = safeFontFamily ?? (
     theme === 'Academic' ? `'Palatino Linotype','Book Antiqua',Palatino,serif`
     : theme === 'Professional' ? `Georgia,'Times New Roman',serif`
     : `'Helvetica Neue',Arial,sans-serif`

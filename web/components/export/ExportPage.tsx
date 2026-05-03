@@ -146,6 +146,7 @@ export default function ExportPage() {
             type="color"
             value={accent}
             onChange={(e) => setAccent(e.target.value)}
+            aria-label="Custom accent colour"
             title="Custom accent colour"
             style={{ width: 22, height: 22, padding: 1, border: '1px solid var(--border)', borderRadius: '50%', cursor: 'pointer', background: 'none' }}
           />

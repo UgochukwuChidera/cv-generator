@@ -16,6 +16,17 @@ const baseStyles = StyleSheet.create({
   skillPill: { borderWidth: 1, borderColor: '#d1d5e1', borderRadius: 10, paddingHorizontal: 5, paddingVertical: 1, marginBottom: 3 },
 });
 
+/**
+ * Map a web CSS font-family string to one of react-pdf's built-in fonts.
+ * react-pdf supports: 'Helvetica', 'Times-Roman', 'Courier' (and their bold/italic variants).
+ */
+function mapWebFontToPdfFont(fontFamily: string | undefined): string {
+  if (!fontFamily) return 'Helvetica';
+  if (fontFamily.includes('Times') || (fontFamily.includes('serif') && !fontFamily.includes('sans'))) return 'Times-Roman';
+  if (fontFamily.includes('Mono') || fontFamily.includes('Consolas') || fontFamily.includes('Courier')) return 'Courier';
+  return 'Helvetica';
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { mcs, theme, documentType, accent: accentParam, fontFamily: fontFamilyParam } = (await req.json()) as { mcs?: unknown; theme?: string; documentType?: 'resume' | 'cv'; accent?: string; fontFamily?: string };
@@ -23,10 +34,7 @@ export async function POST(req: NextRequest) {
 
     const data = normalizeMCS(mcs);
     const accent = accentParam ?? (theme === 'Modern' ? '#2d6cdf' : theme === 'Creative' ? '#8a3ffc' : theme === 'Academic' ? '#2f2f2f' : theme === 'Minimal' ? '#111111' : '#ff4d6a');
-    // Map web font-family strings to react-pdf built-in fonts
-    const pdfFont = fontFamilyParam?.includes('Times') || fontFamilyParam?.includes('serif') ? 'Times-Roman'
-      : fontFamilyParam?.includes('Mono') || fontFamilyParam?.includes('Consolas') ? 'Courier'
-      : 'Helvetica';
+    const pdfFont = mapWebFontToPdfFont(fontFamilyParam);
     const maxExperience = documentType === 'cv' ? 8 : 4;
     const maxProjects = documentType === 'cv' ? 4 : 2;
     const styles = StyleSheet.create({
