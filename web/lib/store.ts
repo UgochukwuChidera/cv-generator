@@ -25,8 +25,31 @@ interface NexusStore {
   aiProvider: 'claude' | 'openai' | 'gemini' | 'openrouter';
   aiKey: string;
   aiModel: string;
+  // Preferences
+  graphVisible: boolean;
+  graphMagnetism: number;
+  graphRadius: number;
+  dotSize: number;
+  dotDensity: number;
+  hueRotationSpeed: number;
+  twinkleIntensity: number;
   setProvider: (provider: NexusStore['aiProvider'], key: string, model?: string) => void;
+  setAIKey: (key: string) => void;
+  setAIProvider: (provider: NexusStore['aiProvider']) => void;
+  setAIModel: (model: string) => void;
+  setPreference: (key: 'graphVisible' | 'graphMagnetism' | 'graphRadius' | 'dotSize' | 'dotDensity' | 'hueRotationSpeed' | 'twinkleIntensity', value: any) => void;
+  resetToDefaults: () => void;
 }
+
+const DEFAULT_PREFERENCES = {
+  graphVisible: true,
+  graphMagnetism: 1.0,
+  graphRadius: 1.0,
+  dotSize: 1.0,
+  dotDensity: 800,
+  hueRotationSpeed: 1.0,
+  twinkleIntensity: 1.0,
+};
 
 export const useNexusStore = create<NexusStore>()(
   persist(
@@ -69,7 +92,13 @@ export const useNexusStore = create<NexusStore>()(
       aiProvider: 'openai',
       aiKey: '',
       aiModel: '',
+      ...DEFAULT_PREFERENCES,
       setProvider: (provider, key, model = '') => set({ aiProvider: provider, aiKey: key, aiModel: model }),
+      setAIKey: (aiKey) => set({ aiKey }),
+      setAIProvider: (aiProvider) => set({ aiProvider }),
+      setAIModel: (aiModel) => set({ aiModel }),
+      setPreference: (key, value) => set({ [key]: value }),
+      resetToDefaults: () => set({ ...DEFAULT_PREFERENCES }),
     }),
     {
       name: 'nexus-store',
@@ -80,6 +109,13 @@ export const useNexusStore = create<NexusStore>()(
         aiProvider: state.aiProvider,
         aiKey: state.aiKey,
         aiModel: state.aiModel,
+        graphVisible: state.graphVisible,
+        graphMagnetism: state.graphMagnetism,
+        graphRadius: state.graphRadius,
+        dotSize: state.dotSize,
+        dotDensity: state.dotDensity,
+        hueRotationSpeed: state.hueRotationSpeed,
+        twinkleIntensity: state.twinkleIntensity,
       }),
       onRehydrateStorage: () => (state) => {
         if (!state?.mcs) return;

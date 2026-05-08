@@ -11,10 +11,8 @@ const TABS = [
   { href: '/editor', label: 'Editor' },
   { href: '/jd-targeting', label: 'JD Target' },
   { href: '/export', label: 'Export' },
-  { href: '/log', label: 'Log' },
+  { href: '/settings', label: 'Settings' },
 ] as const;
-
-const APP_VERSION = 'v1.0.0';
 
 export default function TopBar() {
   const router = useRouter();
@@ -88,7 +86,6 @@ export default function TopBar() {
           <Link href="/" className="brand">
             <span>Nexus</span>
           </Link>
-          <span className="ver">{APP_VERSION}</span>
         </div>
 
         <nav className="nav-tabs nav-center" aria-label="Primary navigation">
@@ -109,7 +106,7 @@ export default function TopBar() {
             data-set={!!aiKey} 
             aria-hidden 
           />
-          <button className="key-btn" onClick={openApiKeyModal}>
+          <button className="btn-primary" onClick={openApiKeyModal}>
             {aiKey ? `${aiProvider} key set` : 'Set API Key'}
           </button>
         </div>
@@ -143,7 +140,7 @@ export default function TopBar() {
           <ul>
             <li><kbd>Shift + /</kbd><span>Open help menu</span></li>
             <li><kbd>Cmd/Ctrl + K</kbd><span>Open command palette</span></li>
-            <li><kbd>Alt + 1..5</kbd><span>Switch tabs (Chat, Editor, JD, Export, Log)</span></li>
+            <li><kbd>Alt + 1..5</kbd><span>Switch tabs (Chat, Editor, JD, Export, Settings)</span></li>
             <li><kbd>Esc</kbd><span>Close active modal</span></li>
           </ul>
         </div>

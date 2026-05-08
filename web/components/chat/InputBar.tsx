@@ -91,7 +91,7 @@ export default function InputBar({
             }
           }}
         />
-        <button className="send" onClick={onSend} disabled={disabled || !value.trim()}>
+        <button className="send dynamic-accent" onClick={onSend} disabled={disabled || !value.trim()}>
           ↑
         </button>
       </div>
