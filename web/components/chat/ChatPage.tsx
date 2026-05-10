@@ -3,10 +3,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { MCS } from '@nexus/schema';
 import { useNexusStore } from '@/lib/store';
-import type { MissingField } from '@/lib/mcs';
-import { assessMCSQuality, buildClarificationQuestions, normalizeMCS } from '@/lib/mcs';
+import { assessMCSQuality, normalizeMCS, type MissingField } from '@/lib/mcs';
 import { useShell } from '@/components/layout/ShellContext';
-import InputBar, { type UploadedFilePayload } from './InputBar';
+import InputBar from './InputBar';
 import MessageBubble, { type ChatMessageModel } from './MessageBubble';
 
 const CHIPS = [
@@ -25,15 +24,13 @@ type ExtractResponse = {
 };
 
 export default function ChatPage() {
-  const { aiKey, aiProvider, aiModel, setMCS } = useNexusStore();
+  const { aiKey, aiProvider, aiModel, tavilyKey, mcs: storeMcs, setMCS } = useNexusStore();
   const { openApiKeyModal, setStatus } = useShell();
 
   const [input, setInput] = useState('');
   const [typing, setTyping] = useState(false);
   const [messages, setMessages] = useState<ChatMessageModel[]>([]);
-  const [draft, setDraft] = useState<MCS | null>(null);
-  const [missing, setMissing] = useState<MissingField[]>([]);
-  const [upload, setUpload] = useState<UploadedFilePayload | null>(null);
+  const [chatHistory, setChatHistory] = useState<{ role: 'user' | 'assistant'; content: string }[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const nextId = useRef(1);
 
@@ -47,124 +44,74 @@ export default function ChatPage() {
   function pushAI(text: string, extra?: Partial<ChatMessageModel>) {
     const id = nextId.current++;
     setMessages((prev) => [...prev, { id, role: 'ai', text, ...extra }]);
+    setChatHistory((prev) => [...prev, { role: 'assistant', content: text }]);
   }
 
-  async function runExtract(text: string, file: UploadedFilePayload | null) {
-    const res = await fetch('/api/ai/extract', {
+  async function runChat(text: string) {
+    const newHistory = [...chatHistory, { role: 'user' as const, content: text }];
+    setChatHistory(newHistory);
+
+    const res = await fetch('/api/ai/chat', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': aiKey,
-        'x-provider': aiProvider,
-      },
-      body: JSON.stringify({ text, file, provider: aiProvider, model: aiModel }),
-    });
-
-    const data = (await res.json()) as ExtractResponse;
-    if (!res.ok || !data.ok) throw new Error(data.error || 'Extraction failed');
-
-    setDraft(data.mcs);
-    setMCS(data.mcs);
-    setMissing(data.quality.missingFields ?? []);
-
-    pushAI(
-      data.quality.missingFields?.length
-        ? 'I extracted a draft profile and found missing details. Answer the prompts below or continue in Editor.'
-        : 'Your profile looks complete and ready for editing/export.',
-      {
-        quality: data.quality.overall,
-        bullets: data.clarificationQuestions,
-        toEditor: true,
-      }
-    );
-
-    setStatus('Profile extracted');
-  }
-
-  async function runClarify(text: string) {
-    if (!draft) return;
-
-    const firstMissing = missing[0];
-    const answers = firstMissing ? { [firstMissing.path]: text } : undefined;
-
-    const res = await fetch('/api/ai/clarify', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': aiKey,
-        'x-provider': aiProvider,
+        'x-tavily-key': tavilyKey,
       },
       body: JSON.stringify({
-        mcs: draft,
-        text,
-        answers,
+        messages: newHistory,
+        mcs: storeMcs,
         provider: aiProvider,
         model: aiModel,
       }),
     });
 
-    const data = (await res.json()) as ExtractResponse;
-    if (!res.ok || !data.ok) throw new Error(data.error || 'Clarification failed');
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.error || 'Chat failed');
 
-    setDraft(data.mcs);
-    setMCS(data.mcs);
-    setMissing(data.quality.missingFields ?? []);
+    if (data.mcs) {
+      setMCS(data.mcs);
+    }
 
-    pushAI(
-      data.quality.missingFields?.length
-        ? 'Thanks — updated. A few fields are still missing.'
-        : 'Great — profile is now complete and ready for JD targeting/export.',
-      {
-        quality: data.quality.overall,
-        bullets: data.clarificationQuestions,
-        toEditor: true,
-      }
-    );
+    const quality = assessMCSQuality(data.mcs);
+    pushAI(data.message, {
+      quality: quality.overall,
+      toEditor: true,
+    });
 
-    setStatus('Clarification merged');
+    setStatus('Conversation updated');
   }
 
   function startScratch() {
     const emptyMcs = normalizeMCS({});
-    setDraft(emptyMcs);
     setMCS(emptyMcs);
-    const quality = assessMCSQuality(emptyMcs);
-    setMissing(quality.missingFields ?? []);
-    const questions = buildClarificationQuestions(quality);
     pushAI(
-      "Let's build your CV from scratch! I'll guide you through each section step by step.",
-      { bullets: questions.slice(0, 1), toEditor: false }
+      "Let's build your CV! I'm Nexus. What's your full name to get us started?",
+      { bullets: [], toEditor: false }
     );
     setStatus('Starting fresh CV');
   }
 
   async function send(raw?: string) {
     const text = (raw ?? input).trim();
-    if (!text && !upload) return;
+    if (!text) return;
     if (!aiKey) {
       openApiKeyModal();
       return;
     }
 
-    // Intercept the "Build from scratch" chip to start guided mode without AI call
     if (text === 'Build my CV from scratch') {
       startScratch();
       return;
     }
 
     const userId = nextId.current++;
-    const fileLabel = upload ? `Uploaded file: ${upload.name}` : '';
-    setMessages((prev) => [...prev, { id: userId, role: 'user', text: [text, fileLabel].filter(Boolean).join('\n') }]);
+    setMessages((prev) => [...prev, { id: userId, role: 'user', text }]);
     setInput('');
     setTyping(true);
 
     try {
-      if (!draft || upload) {
-        await runExtract(text, upload);
-      } else {
-        await runClarify(text);
-      }
-      setUpload(null);
+      await runChat(text);
     } catch (error) {
       pushAI(`I could not process that yet: ${String(error)}`);
       setStatus('AI request failed');
@@ -172,6 +119,7 @@ export default function ChatPage() {
       setTyping(false);
     }
   }
+
 
   return (
     <div className="chat-page">
@@ -213,10 +161,6 @@ export default function ChatPage() {
         value={input}
         onChange={setInput}
         onSend={() => send()}
-        onUpload={(file) => {
-          setUpload(file);
-          setStatus(`Selected ${file.name}`);
-        }}
       />
     </div>
   );

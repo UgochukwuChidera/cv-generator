@@ -17,14 +17,15 @@ const PROVIDERS: Array<{ id: UIProvider; title: string; subtitle: string; hint: 
 export default function ApiKeyModal() {
   const { modalOpen, closeApiKeyModal, setStatus } = useShell();
   const { 
-    aiProvider, aiKey, aiModel, 
-    setAIProvider, setAIKey, setAIModel 
+    aiProvider, aiKey, aiModel, tavilyKey,
+    setAIProvider, setAIKey, setAIModel, setTavilyKey 
   } = useNexusStore();
 
   // Local state for modal editing, initialized from store
   const [localKey, setLocalKey] = useState(aiKey);
   const [localProvider, setLocalProvider] = useState<UIProvider>(aiProvider as UIProvider);
   const [localModel, setLocalModel] = useState(aiModel);
+  const [localTavily, setLocalTavily] = useState(tavilyKey);
 
   // Sync with store when modal opens - use an intermediate effect to handle the reset
   // instead of direct synchronous setStates which can trigger cascading renders.
@@ -37,10 +38,11 @@ export default function ApiKeyModal() {
         setLocalKey(aiKey);
         setLocalProvider(aiProvider as UIProvider);
         setLocalModel(aiModel);
+        setLocalTavily(tavilyKey);
       };
       sync();
     }
-  }, [modalOpen, aiKey, aiProvider, aiModel]);
+  }, [modalOpen, aiKey, aiProvider, aiModel, tavilyKey]);
 
   const providerMeta = useMemo(() => 
     PROVIDERS.find((p) => p.id === localProvider) ?? PROVIDERS[0], 
@@ -50,6 +52,7 @@ export default function ApiKeyModal() {
     setAIProvider(localProvider);
     setAIKey(localKey);
     setAIModel(localModel);
+    setTavilyKey(localTavily);
     setStatus('Intelligence configuration updated');
     closeApiKeyModal();
   };
@@ -57,6 +60,7 @@ export default function ApiKeyModal() {
   const handleClear = () => {
     setLocalKey('');
     setLocalModel('');
+    setLocalTavily('');
     setStatus('API keys cleared from session');
   };
 
@@ -106,6 +110,19 @@ export default function ApiKeyModal() {
               value={localModel} 
               onChange={(e) => setLocalModel(e.target.value)} 
               placeholder="e.g. gpt-4o" 
+            />
+          </div>
+
+          <div className="input-group">
+            <Tooltip content="Required for web search and location data tools.">
+              <label>Tavily Search Key <small>(Optional)</small></label>
+            </Tooltip>
+            <input 
+              type="password"
+              className="akm-input" 
+              value={localTavily} 
+              onChange={(e) => setLocalTavily(e.target.value)} 
+              placeholder="tvly-..." 
             />
           </div>
         </div>

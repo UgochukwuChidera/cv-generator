@@ -25,6 +25,8 @@ interface NexusStore {
   aiProvider: 'claude' | 'openai' | 'gemini' | 'openrouter';
   aiKey: string;
   aiModel: string;
+  tavilyKey: string;
+  setTavilyKey: (key: string) => void;
   // Preferences
   graphVisible: boolean;
   graphMagnetism: number;
@@ -37,7 +39,7 @@ interface NexusStore {
   setAIKey: (key: string) => void;
   setAIProvider: (provider: NexusStore['aiProvider']) => void;
   setAIModel: (model: string) => void;
-  setPreference: (key: 'graphVisible' | 'graphMagnetism' | 'graphRadius' | 'dotSize' | 'dotDensity' | 'hueRotationSpeed' | 'twinkleIntensity', value: any) => void;
+  setPreference: (key: 'graphVisible' | 'graphMagnetism' | 'graphRadius' | 'dotSize' | 'dotDensity' | 'hueRotationSpeed' | 'twinkleIntensity', value: number | boolean) => void;
   resetToDefaults: () => void;
 }
 
@@ -92,11 +94,13 @@ export const useNexusStore = create<NexusStore>()(
       aiProvider: 'openai',
       aiKey: '',
       aiModel: '',
+      tavilyKey: '',
       ...DEFAULT_PREFERENCES,
       setProvider: (provider, key, model = '') => set({ aiProvider: provider, aiKey: key, aiModel: model }),
       setAIKey: (aiKey) => set({ aiKey }),
       setAIProvider: (aiProvider) => set({ aiProvider }),
       setAIModel: (aiModel) => set({ aiModel }),
+      setTavilyKey: (tavilyKey) => set({ tavilyKey }),
       setPreference: (key, value) => set({ [key]: value }),
       resetToDefaults: () => set({ ...DEFAULT_PREFERENCES }),
     }),
@@ -109,6 +113,7 @@ export const useNexusStore = create<NexusStore>()(
         aiProvider: state.aiProvider,
         aiKey: state.aiKey,
         aiModel: state.aiModel,
+        tavilyKey: state.tavilyKey,
         graphVisible: state.graphVisible,
         graphMagnetism: state.graphMagnetism,
         graphRadius: state.graphRadius,

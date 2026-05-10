@@ -1,4 +1,5 @@
 import type { MCS } from '@nexus/schema';
+import { TOOL_DEFINITIONS, TOOLS } from './tools';
 import {
   assessMCSQuality,
   buildClarificationQuestions,
@@ -12,6 +13,14 @@ export interface AIConfig {
   provider: AIProvider;
   apiKey: string;
   model?: string;
+  tavilyKey?: string;
+}
+
+export interface ChatMessage {
+  role: 'system' | 'user' | 'assistant' | 'tool';
+  content: string;
+  tool_calls?: any[];
+  tool_call_id?: string;
 }
 
 const APP_CAPABILITIES_CONTEXT = `App capabilities:
@@ -26,30 +35,11 @@ Behavior requirements:
 - If data is unknown, keep it empty.
 - Scores and recommendations must reflect actual provided content.`;
 
-function parseAIJson<T>(raw: string): T {
-  const stripped = raw
-    .replace(/```json\n?/gi, '')
-    .replace(/```\n?/g, '')
-    .trim();
-
-  try {
-    return JSON.parse(stripped) as T;
-  } catch {
-    const start = stripped.indexOf('{');
-    const end = stripped.lastIndexOf('}');
-    if (start >= 0 && end > start) {
-      return JSON.parse(stripped.slice(start, end + 1)) as T;
-    }
-    throw new Error('Invalid JSON response from AI provider');
-  }
-}
-
 export async function callAI(
   config: AIConfig,
-  systemPrompt: string,
-  userMessage: string
-): Promise<string> {
-  const { provider, apiKey, model } = config;
+  messages: ChatMessage[]
+): Promise<ChatMessage> {
+  const { provider, apiKey, model, tavilyKey } = config;
 
   if (!apiKey) throw new Error('API key is required');
 
@@ -67,10 +57,13 @@ export async function callAI(
       },
       body: JSON.stringify({
         model: model || (provider === 'openai' ? 'gpt-4o-mini' : 'openai/gpt-4o-mini'),
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userMessage },
-        ],
+        messages: messages.map(m => ({
+          role: m.role,
+          content: m.content,
+          tool_calls: m.tool_calls,
+          tool_call_id: m.tool_call_id
+        })),
+        tools: provider === 'openai' ? TOOL_DEFINITIONS.map(d => ({ type: 'function', function: d })) : undefined,
         temperature: 0.2,
       }),
     });
@@ -80,57 +73,141 @@ export async function callAI(
     }
 
     const data = await res.json();
-    return String(data?.choices?.[0]?.message?.content ?? '');
-  }
-
-  if (provider === 'claude') {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: model || 'claude-3-haiku-20240307',
-        max_tokens: 4096,
-        system: systemPrompt,
-        messages: [{ role: 'user', content: userMessage }],
-      }),
-    });
-
-    if (!res.ok) {
-      throw new Error(`AI error (${provider}): ${res.status} ${await res.text()}`);
-    }
-
-    const data = await res.json();
-    return String(data?.content?.[0]?.text ?? '');
-  }
-
-  if (provider === 'gemini') {
-    const rawModel = model || 'gemini-1.5-flash';
-    const modelName = /^[a-z0-9.-]+$/i.test(rawModel) ? rawModel : 'gemini-1.5-flash';
-
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: `${systemPrompt}\n\n${userMessage}` }] }],
-        }),
+    const msg = data?.choices?.[0]?.message;
+    
+    if (msg?.tool_calls && provider === 'openai') {
+      const toolResults: ChatMessage[] = [];
+      for (const tc of msg.tool_calls) {
+        const tool = TOOLS.find(t => t.name === tc.function.name);
+        if (tool) {
+          try {
+            const args = JSON.parse(tc.function.arguments);
+            const result = await tool.execute(args, { tavilyKey });
+            toolResults.push({
+              role: 'tool',
+              tool_call_id: tc.id,
+              content: JSON.stringify(result)
+            });
+          } catch (e) {
+            toolResults.push({
+              role: 'tool',
+              tool_call_id: tc.id,
+              content: JSON.stringify({ error: String(e) })
+            });
+          }
+        }
       }
-    );
-
-    if (!res.ok) {
-      throw new Error(`AI error (${provider}): ${res.status} ${await res.text()}`);
+      return callAI(config, [...messages, msg, ...toolResults]);
     }
 
-    const data = await res.json();
-    return String(data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '');
+    return { role: 'assistant', content: String(msg?.content ?? '') };
+  }
+
+  if (provider === 'claude' || provider === 'gemini') {
+     const system = messages.find(m => m.role === 'system')?.content || '';
+     
+     if (provider === 'claude') {
+        const res = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+          },
+          body: JSON.stringify({
+            model: model || 'claude-3-haiku-20240307',
+            max_tokens: 4096,
+            system,
+            messages: messages.filter(m => m.role !== 'system').map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content })),
+          }),
+        });
+        if (!res.ok) throw new Error(`AI error (claude): ${res.status} ${await res.text()}`);
+        const data = await res.json();
+        return { role: 'assistant', content: String(data?.content?.[0]?.text ?? '') };
+     } else {
+        const rawModel = model || 'gemini-1.5-flash';
+        const modelName = /^[a-z0-9.-]+$/i.test(rawModel) ? rawModel : 'gemini-1.5-flash';
+        const res = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: messages.map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })),
+            }),
+          }
+        );
+        if (!res.ok) throw new Error(`AI error (gemini): ${res.status} ${await res.text()}`);
+        const data = await res.json();
+        return { role: 'assistant', content: String(data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '') };
+     }
   }
 
   throw new Error(`Unknown provider: ${provider}`);
+}
+
+export async function chatWithAI(
+  config: AIConfig,
+  messages: ChatMessage[],
+  mcs: MCS
+): Promise<{ message: string; mcs: MCS }> {
+  const systemPrompt = `${APP_CAPABILITIES_CONTEXT}
+You are Nexus, an elite career intelligence AI.
+Current User Profile JSON:
+${JSON.stringify(mcs)}
+
+Your goal: Help the user build a perfect CV through professional, temperament-aware conversation.
+Behavior:
+1. Maintain state: You know what you've already asked.
+2. Inquire deeply: If a user gives just a name, politely inquire about their professional title, location, and contact info.
+3. Validate Education: Check if they are a high school or university graduate. If only one experience is provided, ask if there are others.
+4. Periodically ask if they are done or want to move to the editor.
+5. Use the 'search_web' tool to help the user find company locations, specific job requirements, or industry standards if needed.
+6. Temperament: Be encouraging, professional, and thorough.
+
+If you update the profile, explain what you updated.
+Always return a helpful conversational response.`;
+
+  const fullMessages: ChatMessage[] = [
+    { role: 'system', content: systemPrompt },
+    ...messages
+  ];
+
+  const response = await callAI(config, fullMessages);
+  
+  let updatedMcs = mcs;
+  const jsonMatch = response.content.match(/```json\n([\s\S]*?)\n```/);
+  if (jsonMatch) {
+    try {
+      const patch = JSON.parse(jsonMatch[1]);
+      updatedMcs = normalizeMCS({ ...mcs, ...patch });
+    } catch (e) {
+      console.warn('Failed to parse MCS patch from AI response', e);
+    }
+  }
+
+  return {
+    message: response.content,
+    mcs: updatedMcs
+  };
+}
+
+function parseAIJson<T>(raw: string): T {
+  const stripped = raw
+    .replace(/```json\n?/gi, '')
+    .replace(/```\n?/g, '')
+    .trim();
+
+  try {
+    return JSON.parse(stripped) as T;
+  } catch {
+    const start = stripped.indexOf('{');
+    const end = stripped.lastIndexOf('}');
+    if (start >= 0 && end > start) {
+      return JSON.parse(stripped.slice(start, end + 1)) as T;
+    }
+    throw new Error('Invalid JSON response from AI provider');
+  }
 }
 
 export type GuidedExtractResult = {
@@ -159,7 +236,8 @@ Rules:
 - Keep only facts supported by the input text.
 - Do not invent languages, projects, education, or achievements.`;
 
-  const raw = await callAI(config, systemPrompt, `Extract profile from:\n\n${text}`);
+  const rawMsg = await callAI(config, [{ role: 'system', content: systemPrompt }, { role: 'user', content: `Extract profile from:\n\n${text}` }]);
+  const raw = rawMsg.content;
   const draft = parseAIJson<unknown>(raw);
   const mcs = normalizeMCS(draft);
   const quality = assessMCSQuality(mcs);
@@ -176,7 +254,8 @@ export async function improveBullet(config: AIConfig, bullet: string): Promise<s
 Return STRICT JSON object: { "variants": ["", "", ""] }.
 Use quantified impact and concise professional language.`;
 
-  const raw = await callAI(config, systemPrompt, `Improve this bullet: ${bullet}`);
+  const rawMsg = await callAI(config, [{ role: 'system', content: systemPrompt }, { role: 'user', content: `Improve this bullet: ${bullet}` }]);
+  const raw = rawMsg.content;
   const parsed = parseAIJson<{ variants?: string[] }>(raw);
   return (parsed.variants ?? []).map((x) => x.trim()).filter(Boolean).slice(0, 3);
 }
@@ -215,11 +294,14 @@ Rules:
 - Never inflate scores when source data is missing.
 - Missing or empty sections must reduce relevant scores.`;
 
-  const raw = await callAI(
+  const rawMsg = await callAI(
     config,
-    systemPrompt,
-    `Resume:\n${JSON.stringify(mcs)}\n\nJob Description:\n${jd}`
+    [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: `Resume:\n${JSON.stringify(mcs)}\n\nJob Description:\n${jd}` }
+    ]
   );
+  const raw = rawMsg.content;
 
   const parsed = parseAIJson<{
     score?: number;
@@ -264,11 +346,13 @@ Write a concise, role-specific cover letter.
 Tone: ${tone}.
 Return plain text only.`;
 
-  const raw = await callAI(
+  const rawMsg = await callAI(
     config,
-    systemPrompt,
-    `Candidate profile:\n${JSON.stringify(mcs)}\n\nJob Description:\n${jd}`
+    [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: `Candidate profile:\n${JSON.stringify(mcs)}\n\nJob Description:\n${jd}` }
+    ]
   );
 
-  return raw.replace(/```[a-zA-Z]*\n?|\n?```/g, '').trim();
+  return rawMsg.content.replace(/```[a-zA-Z]*\n?|\n?```/g, '').trim();
 }
