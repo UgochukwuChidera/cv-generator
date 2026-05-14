@@ -41,6 +41,16 @@ interface NexusStore {
   setAIModel: (model: string) => void;
   setPreference: (key: 'graphVisible' | 'graphMagnetism' | 'graphRadius' | 'dotSize' | 'dotDensity' | 'hueRotationSpeed' | 'twinkleIntensity', value: number | boolean) => void;
   resetToDefaults: () => void;
+  voiceEnabled: boolean;
+  voiceRecording: boolean;
+  voiceProcessing: boolean;
+  voiceSpeaking: boolean;
+  canvasInteractionLocked: boolean;
+  setVoiceEnabled: (enabled: boolean) => void;
+  setVoiceRecording: (recording: boolean) => void;
+  setVoiceProcessing: (processing: boolean) => void;
+  setVoiceSpeaking: (speaking: boolean) => void;
+  setCanvasInteractionLocked: (locked: boolean) => void;
 }
 
 const DEFAULT_PREFERENCES = {
@@ -95,6 +105,11 @@ export const useNexusStore = create<NexusStore>()(
       aiKey: '',
       aiModel: '',
       tavilyKey: '',
+      voiceEnabled: true,
+      voiceRecording: false,
+      voiceProcessing: false,
+      voiceSpeaking: false,
+      canvasInteractionLocked: false,
       ...DEFAULT_PREFERENCES,
       setProvider: (provider, key, model = '') => set({ aiProvider: provider, aiKey: key, aiModel: model }),
       setAIKey: (aiKey) => set({ aiKey }),
@@ -103,6 +118,11 @@ export const useNexusStore = create<NexusStore>()(
       setTavilyKey: (tavilyKey) => set({ tavilyKey }),
       setPreference: (key, value) => set({ [key]: value }),
       resetToDefaults: () => set({ ...DEFAULT_PREFERENCES }),
+      setVoiceEnabled: (voiceEnabled) => set({ voiceEnabled }),
+      setVoiceRecording: (voiceRecording) => set({ voiceRecording }),
+      setVoiceProcessing: (voiceProcessing) => set({ voiceProcessing }),
+      setVoiceSpeaking: (voiceSpeaking) => set({ voiceSpeaking }),
+      setCanvasInteractionLocked: (canvasInteractionLocked) => set({ canvasInteractionLocked }),
     }),
     {
       name: 'nexus-store',
@@ -114,6 +134,11 @@ export const useNexusStore = create<NexusStore>()(
         aiKey: state.aiKey,
         aiModel: state.aiModel,
         tavilyKey: state.tavilyKey,
+        voiceEnabled: state.voiceEnabled,
+        voiceRecording: state.voiceRecording,
+        voiceProcessing: state.voiceProcessing,
+        voiceSpeaking: state.voiceSpeaking,
+        canvasInteractionLocked: state.canvasInteractionLocked,
         graphVisible: state.graphVisible,
         graphMagnetism: state.graphMagnetism,
         graphRadius: state.graphRadius,
