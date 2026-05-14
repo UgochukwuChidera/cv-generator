@@ -33,7 +33,11 @@ export default function ParticleCanvas() {
     dotSize,
     dotDensity,
     hueRotationSpeed, 
-    twinkleIntensity 
+    twinkleIntensity,
+    canvasInteractionLocked,
+    voiceRecording,
+    voiceProcessing,
+    voiceSpeaking,
   } = useNexusStore();
 
   useEffect(() => {
@@ -131,6 +135,10 @@ export default function ParticleCanvas() {
         if (pulseComplete) mouse.active = false;
       }
 
+      if (canvasInteractionLocked || voiceRecording || voiceProcessing || voiceSpeaking) {
+        mouse.active = false;
+      }
+
       const isMouseInBounds = mouse.active && 
                              mouse.x >= 0 && mouse.x <= W && 
                              mouse.y >= 0 && mouse.y <= H;
@@ -210,6 +218,10 @@ export default function ParticleCanvas() {
       if (isOverInteractive) {
         mouse.active = false;
       } else {
+        if (canvasInteractionLocked || voiceRecording || voiceProcessing || voiceSpeaking) {
+          mouse.active = false;
+          return;
+        }
         mouse.x = e.clientX;
         mouse.y = e.clientY;
         mouse.active = true;
@@ -243,7 +255,19 @@ export default function ParticleCanvas() {
       window.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('blur', onPointerLeave);
     };
-  }, [graphVisible, graphMagnetism, graphRadius, dotSize, dotDensity, hueRotationSpeed, twinkleIntensity]);
+  }, [
+    graphVisible,
+    graphMagnetism,
+    graphRadius,
+    dotSize,
+    dotDensity,
+    hueRotationSpeed,
+    twinkleIntensity,
+    canvasInteractionLocked,
+    voiceRecording,
+    voiceProcessing,
+    voiceSpeaking,
+  ]);
 
   if (!graphVisible) return null;
 
