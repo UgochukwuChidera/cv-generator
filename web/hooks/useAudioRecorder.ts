@@ -41,7 +41,8 @@ export function useAudioRecorder(endpoint = '/api/cv-voice', apiKey = '') {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    return () => cleanup(recorderRef.current);
+    const recorderState = recorderRef.current;
+    return () => cleanup(recorderState);
   }, []);
 
   const startRecording = useCallback(async (): Promise<boolean> => {
