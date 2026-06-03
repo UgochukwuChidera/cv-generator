@@ -134,6 +134,7 @@ export default function EditorPage() {
                   ['website', 'Website'],
                   ['linkedin', 'LinkedIn'],
                   ['github', 'GitHub'],
+                  ['twitter', 'Twitter'],
                 ] as const
               ).map(([field, label]) => (
                 <label key={field}>

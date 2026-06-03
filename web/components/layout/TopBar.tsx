@@ -22,13 +22,16 @@ export default function TopBar() {
   const [showHelp, setShowHelp] = useState(false);
   const [showPalette, setShowPalette] = useState(false);
 
+  const { snapshotMode, setSnapshotMode } = useNexusStore();
+
   const commands = useMemo(
     () => [
       ...TABS.map((tab) => ({ id: tab.href, label: `Go to ${tab.label}`, run: () => router.push(tab.href) })),
+      { id: 'snap', label: snapshotMode ? 'Exit snapshot mode' : 'Snapshot mode — capture a region', run: () => setSnapshotMode(!snapshotMode) },
       { id: 'help', label: 'Show keyboard shortcuts', run: () => setShowHelp(true) },
       { id: 'key', label: aiKey ? 'Open API key settings' : 'Set API key', run: openApiKeyModal },
     ],
-    [aiKey, openApiKeyModal, router]
+    [aiKey, openApiKeyModal, router, snapshotMode, setSnapshotMode]
   );
 
   useEffect(() => {
@@ -54,6 +57,12 @@ export default function TopBar() {
         return;
       }
 
+      if (event.altKey && event.key.toLowerCase() === 's') {
+        event.preventDefault();
+        setSnapshotMode(!snapshotMode);
+        return;
+      }
+
       if (event.altKey) {
         const navMap: Record<string, string> = {
           '1': '/',
@@ -72,7 +81,7 @@ export default function TopBar() {
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [router]);
+  }, [router, snapshotMode, setSnapshotMode]);
 
   function closeOverlays() {
     setShowHelp(false);
@@ -141,6 +150,7 @@ export default function TopBar() {
             <li><kbd>Shift + /</kbd><span>Open help menu</span></li>
             <li><kbd>Cmd/Ctrl + K</kbd><span>Open command palette</span></li>
             <li><kbd>Alt + 1..5</kbd><span>Switch tabs (Chat, Editor, JD, Export, Settings)</span></li>
+            <li><kbd>Alt + S</kbd><span>Toggle snapshot capture mode</span></li>
             <li><kbd>Esc</kbd><span>Close active modal</span></li>
           </ul>
         </div>

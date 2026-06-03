@@ -26,8 +26,8 @@ export default function DataCard({ rows }: { rows: DataRow[] }) {
       <div className="dc-h">
         <strong>Extracted Data — click to edit</strong>
         <div className="dc-actions">
-          {!editing ? <button onClick={() => setEditing(true)}>Edit</button> : <button onClick={cancel}>Cancel</button>}
-          {editing && <button onClick={save}>Save</button>}
+          {!editing ? <button className="btn-ghost" onClick={() => setEditing(true)}>Edit</button> : <button className="btn-ghost" onClick={cancel}>Cancel</button>}
+          {editing && <button className="btn-primary" onClick={save}>Save</button>}
         </div>
       </div>
       {visible.map((row, index) => (

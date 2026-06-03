@@ -59,13 +59,8 @@ function ProfessionalTemplate({ mcs, maxExp, maxProj }: { mcs: MCS; maxExp: numb
             {esc(p.name) || 'Your Name'}
           </div>
           <div style={{ fontSize: 12, color: '#555', marginTop: 3, fontFamily: 'Arial, sans-serif' }}>
-            {[p.title, p.email, p.phone, p.location].filter(Boolean).join('  ·  ')}
+            {[p.title, p.email, p.phone, p.location, p.website, p.linkedin, p.github, p.twitter].filter(Boolean).join('  ·  ')}
           </div>
-          {(p.linkedin || p.github) && (
-            <div style={{ fontSize: 11, color: accent, marginTop: 2, fontFamily: 'Arial, sans-serif' }}>
-              {[p.linkedin, p.github].filter(Boolean).join('  ·  ')}
-            </div>
-          )}
         </div>
 
         {/* Summary */}
@@ -202,8 +197,10 @@ function ModernTemplate({ mcs, maxExp, maxProj }: { mcs: MCS; maxExp: number; ma
           {p.email && <SidebarItem text={p.email} accent={accent} />}
           {p.phone && <SidebarItem text={p.phone} accent={accent} />}
           {p.location && <SidebarItem text={p.location} accent={accent} />}
+          {p.website && <SidebarItem text={p.website} accent={accent} />}
           {p.linkedin && <SidebarItem text="LinkedIn" accent={accent} />}
           {p.github && <SidebarItem text="GitHub" accent={accent} />}
+          {p.twitter && <SidebarItem text={`@${p.twitter.replace('@','')}`} accent={accent} />}
         </SidebarSection>
 
         {/* Skills */}
@@ -345,13 +342,8 @@ function AcademicTemplate({ mcs, maxExp, maxProj }: { mcs: MCS; maxExp: number; 
         </div>
         {p.title && <div style={{ fontSize: 12, color: '#444', marginTop: 2, fontStyle: 'italic' }}>{p.title}</div>}
         <div style={{ fontSize: 11, color: '#555', marginTop: 5 }}>
-          {[p.email, p.phone, p.location].filter(Boolean).join('  ·  ')}
+          {[p.email, p.phone, p.location, p.website, p.linkedin, p.github, p.twitter].filter(Boolean).join('  ·  ')}
         </div>
-        {(p.linkedin || p.github || p.website) && (
-          <div style={{ fontSize: 10.5, color: '#666', marginTop: 3 }}>
-            {[p.website, p.linkedin, p.github].filter(Boolean).join('  ·  ')}
-          </div>
-        )}
       </div>
 
       {mcs.summary && (
@@ -460,7 +452,7 @@ function MinimalTemplate({ mcs, maxExp, maxProj }: { mcs: MCS; maxExp: number; m
           {esc(p.name) || 'Your Name'}
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px', marginTop: 5 }}>
-          {[p.title, p.email, p.phone, p.location].filter(Boolean).map((item, i) => (
+          {[p.title, p.email, p.phone, p.location, p.website, p.linkedin, p.github, p.twitter].filter(Boolean).map((item, i) => (
             <span key={i} style={{ fontSize: 10.5, color: i === 0 ? '#111' : '#888' }}>
               {item}
             </span>
@@ -588,7 +580,7 @@ function CreativeTemplate({ mcs, maxExp, maxProj }: { mcs: MCS; maxExp: number; 
           </div>
         )}
         <div style={{ fontSize: 10.5, color: '#6d28d9', marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: '3px 12px' }}>
-          {[p.email, p.phone, p.location, p.linkedin, p.github].filter(Boolean).map((item, i) => (
+          {[p.email, p.phone, p.location, p.website, p.linkedin, p.github, p.twitter].filter(Boolean).map((item, i) => (
             <span key={i}>{item}</span>
           ))}
         </div>
@@ -878,7 +870,7 @@ function CoverLetterView({ mcs, accent, coverLetter, fontFamily }: { mcs: MCS; a
       <div style={{ borderBottom: `3px solid ${accent}`, paddingBottom: 10, marginBottom: 16 }}>
         <div style={{ fontSize: 20, fontWeight: 700, color: '#111' }}>{esc(p.name) || 'Your Name'}</div>
         <div style={{ fontSize: 11, color: '#666', marginTop: 3 }}>
-          {[p.email, p.phone, p.location].filter(Boolean).join('  ·  ')}
+          {[p.email, p.phone, p.location, p.website, p.linkedin, p.github, p.twitter].filter(Boolean).join('  ·  ')}
         </div>
       </div>
       <pre

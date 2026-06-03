@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef } from 'react';
+import VoiceMicButton from '@/components/voice/VoiceAssistantInterface';
 
 function autoResize(el: HTMLTextAreaElement) {
   el.style.height = 'auto';
@@ -91,13 +92,27 @@ export default function InputBar({
             }
           }}
         />
+
+        <VoiceMicButton />
+
         <button className="send dynamic-accent" onClick={onSend} disabled={disabled || !value.trim()}>
           ↑
         </button>
+        {value.trim() && (
+          <button
+            className="btn-ghost"
+            type="button"
+            onClick={() => navigator.clipboard.writeText(value)}
+            title="Copy text"
+            aria-label="Copy text"
+          >
+            📋
+          </button>
+        )}
       </div>
       <div className="hint-row">
         <span>Upload TXT/PDF/DOCX/JSON/YAML · Enter to send · Shift+Enter newline</span>
-        <span>{value.length} chars</span>
+        <span className="dynamic-text">{value.length} chars</span>
       </div>
     </div>
   );

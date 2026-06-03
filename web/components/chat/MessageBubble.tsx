@@ -11,7 +11,24 @@ export type ChatMessageModel = {
   toEditor?: boolean;
 };
 
-export default function MessageBubble({ message }: { message: ChatMessageModel }) {
+export default function MessageBubble({ 
+  message, 
+  onRetry, 
+  onCopy 
+}: { 
+  message: ChatMessageModel; 
+  onRetry?: (text: string) => void;
+  onCopy?: (text: string) => void;
+}) {
+  const handleCopy = () => {
+    navigator.clipboard.writeText(message.text);
+    onCopy?.(message.text);
+  };
+
+  const handleRetry = () => {
+    onRetry?.(message.text);
+  };
+
   return (
     <div className={`msg ${message.role === 'user' ? 'u' : ''}`}>
       <div className="av">{message.role === 'ai' ? '✦' : 'U'}</div>
@@ -36,6 +53,16 @@ export default function MessageBubble({ message }: { message: ChatMessageModel }
             </div>
           )}
         </div>
+        {message.role === 'user' && (
+          <div className="msg-actions">
+            <button className="msg-action-btn" onClick={handleRetry} title="Retry">
+              ↻
+            </button>
+            <button className="msg-action-btn" onClick={handleCopy} title="Copy">
+              📋
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

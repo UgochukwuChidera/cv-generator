@@ -17,7 +17,9 @@ export default function LivePreview({ mcs }: { mcs: MCS }) {
       <div className="cv-wrap">
         <article className="cv-page">
           <h1>{p.name || 'Unnamed Candidate'}</h1>
-          <h2>{[p.title, p.email, p.phone, p.location].filter(Boolean).join(' · ')}</h2>
+          <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 4 }}>
+            {[p.title, p.email, p.phone, p.location, p.website, p.linkedin, p.github, p.twitter].filter(Boolean).join(' · ')}
+          </div>
 
           {mcs.summary && (
             <section>

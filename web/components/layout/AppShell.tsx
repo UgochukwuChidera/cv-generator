@@ -4,7 +4,8 @@ import ParticleCanvas from './ParticleCanvas';
 import TopBar from './TopBar';
 import ApiKeyModal from './ApiKeyModal';
 import { ShellProvider } from './ShellContext';
-import VoiceAssistantInterface from '@/components/voice/VoiceAssistantInterface';
+import SnapshotCanvas from '@/components/snapshot/SnapshotCanvas';
+import FABChat from '@/components/snapshot/FABChat';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
@@ -14,7 +15,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <TopBar />
         <div className="app-body">{children}</div>
       </div>
-      <VoiceAssistantInterface />
+      <SnapshotCanvas />
+      <FABChat />
       <ApiKeyModal />
     </ShellProvider>
   );

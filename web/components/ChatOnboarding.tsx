@@ -45,40 +45,41 @@ export function ChatOnboarding() {
   }
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto space-y-4 p-4">
-        {messages.map((m, i) => (
-          <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm ${
-              m.role === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-800'
-            }`}>
-              {m.content}
+    <div className="chat-page" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <div className="chat-scroll" style={{ flex: 1, overflowY: 'auto' }}>
+        <div className="chat-inner" style={{ padding: 'var(--space-4)' }}>
+          {messages.map((m, i) => (
+            <div className={`msg ${m.role === 'user' ? 'u' : ''}`} key={i}>
+              <div className="av">{m.role === 'user' ? 'U' : '✦'}</div>
+              <div className="bub">{m.content}</div>
             </div>
-          </div>
-        ))}
-        {loading && (
-          <div className="flex justify-start">
-            <div className="bg-gray-100 rounded-2xl px-4 py-3 text-sm text-gray-500 animate-pulse">Extracting...</div>
-          </div>
-        )}
-        <div ref={endRef} />
+          ))}
+          {loading && (
+            <div className="msg">
+              <div className="av">✦</div>
+              <div className="bub" style={{ color: 'var(--text-tertiary)' }}>Extracting...</div>
+            </div>
+          )}
+          <div ref={endRef} />
+        </div>
       </div>
-      <div className="border-t p-4 flex gap-2">
-        <textarea
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
-          placeholder="Paste your resume or describe your career..."
-          rows={3}
-          className="flex-1 border rounded-xl px-4 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-        <button
-          onClick={send}
-          disabled={loading || !input.trim()}
-          className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
-        >
-          Send
-        </button>
+      <div className="chat-input-wrap">
+        <div className="input-bar">
+          <textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
+            placeholder="Paste your resume or describe your career..."
+            rows={1}
+          />
+          <button
+            onClick={send}
+            disabled={loading || !input.trim()}
+            className="send dynamic-accent"
+          >
+            ↑
+          </button>
+        </div>
       </div>
     </div>
   );

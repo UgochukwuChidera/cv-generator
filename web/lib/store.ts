@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { MCS } from '@nexus/schema';
+import type { MCS, Snapshot, Annotation, FABMessage, AIAction } from '@nexus/schema';
 import { assessMCSQuality, normalizeMCS, type MCSQuality } from './mcs';
 
 export type JDAnalysis = {
@@ -14,6 +14,7 @@ export type JDAnalysis = {
 };
 
 interface NexusStore {
+  // Core CV
   mcs: MCS | null;
   quality: MCSQuality | null;
   jdAnalysis: JDAnalysis | null;
@@ -22,11 +23,18 @@ interface NexusStore {
   clearMCS: () => void;
   setJDAnalysis: (analysis: JDAnalysis | null) => void;
   saveCoverLetter: (key: string, content: string) => void;
-  aiProvider: 'claude' | 'openai' | 'gemini' | 'openrouter';
+
+  // AI config
+  aiProvider: 'claude' | 'openai' | 'gemini' | 'openrouter' | 'groq';
   aiKey: string;
   aiModel: string;
   tavilyKey: string;
   setTavilyKey: (key: string) => void;
+  setProvider: (provider: NexusStore['aiProvider'], key: string, model?: string) => void;
+  setAIKey: (key: string) => void;
+  setAIProvider: (provider: NexusStore['aiProvider']) => void;
+  setAIModel: (model: string) => void;
+
   // Preferences
   graphVisible: boolean;
   graphMagnetism: number;
@@ -35,12 +43,10 @@ interface NexusStore {
   dotDensity: number;
   hueRotationSpeed: number;
   twinkleIntensity: number;
-  setProvider: (provider: NexusStore['aiProvider'], key: string, model?: string) => void;
-  setAIKey: (key: string) => void;
-  setAIProvider: (provider: NexusStore['aiProvider']) => void;
-  setAIModel: (model: string) => void;
   setPreference: (key: 'graphVisible' | 'graphMagnetism' | 'graphRadius' | 'dotSize' | 'dotDensity' | 'hueRotationSpeed' | 'twinkleIntensity', value: number | boolean) => void;
   resetToDefaults: () => void;
+
+  // Voice
   voiceEnabled: boolean;
   voiceRecording: boolean;
   voiceProcessing: boolean;
@@ -51,6 +57,32 @@ interface NexusStore {
   setVoiceProcessing: (processing: boolean) => void;
   setVoiceSpeaking: (speaking: boolean) => void;
   setCanvasInteractionLocked: (locked: boolean) => void;
+
+  // ─── Snapshots ──────────────────────────────────────────────
+  snapshots: Snapshot[];
+  snapshotMode: boolean;
+  activeSnapshotId: string | null;
+  addSnapshot: (snapshot: Snapshot) => void;
+  removeSnapshot: (id: string) => void;
+  setSnapshotMode: (active: boolean) => void;
+  setActiveSnapshot: (id: string | null) => void;
+  resolveSnapshot: (id: string) => void;
+
+  // ─── Annotations ────────────────────────────────────────────
+  annotations: Annotation[];
+  addAnnotation: (annotation: Annotation) => void;
+  updateAnnotation: (id: string, partial: Partial<Annotation>) => void;
+  removeAnnotation: (id: string) => void;
+
+  // ─── FAB Chat ───────────────────────────────────────────────
+  fabOpen: boolean;
+  fabProcessing: boolean;
+  fabMessages: FABMessage[];
+  toggleFab: () => void;
+  setFabOpen: (open: boolean) => void;
+  addFabMessage: (msg: FABMessage) => void;
+  setFabProcessing: (processing: boolean) => void;
+  clearFabMessages: () => void;
 }
 
 const DEFAULT_PREFERENCES = {
@@ -111,6 +143,49 @@ export const useNexusStore = create<NexusStore>()(
       voiceSpeaking: false,
       canvasInteractionLocked: false,
       ...DEFAULT_PREFERENCES,
+
+      // ─── Snapshot state ──────────────────────────────────────
+      snapshots: [],
+      snapshotMode: false,
+      activeSnapshotId: null,
+      addSnapshot: (snapshot) =>
+        set((s) => ({ snapshots: [...s.snapshots, snapshot] })),
+      removeSnapshot: (id) =>
+        set((s) => ({
+          snapshots: s.snapshots.filter((x) => x.id !== id),
+          annotations: s.annotations.filter((a) => a.snapshotId !== id),
+          activeSnapshotId: s.activeSnapshotId === id ? null : s.activeSnapshotId,
+        })),
+      setSnapshotMode: (snapshotMode) => set({ snapshotMode, canvasInteractionLocked: snapshotMode }),
+      setActiveSnapshot: (activeSnapshotId) => set({ activeSnapshotId }),
+      resolveSnapshot: (id) =>
+        set((s) => ({
+          snapshots: s.snapshots.map((x) => (x.id === id ? { ...x, resolved: true } : x)),
+        })),
+
+      // ─── Annotation state ────────────────────────────────────
+      annotations: [],
+      addAnnotation: (annotation) =>
+        set((s) => ({ annotations: [...s.annotations, annotation] })),
+      updateAnnotation: (id, partial) =>
+        set((s) => ({
+          annotations: s.annotations.map((a) => (a.id === id ? { ...a, ...partial } : a)),
+        })),
+      removeAnnotation: (id) =>
+        set((s) => ({ annotations: s.annotations.filter((a) => a.id !== id) })),
+
+      // ─── FAB Chat state ──────────────────────────────────────
+      fabOpen: false,
+      fabProcessing: false,
+      fabMessages: [],
+      toggleFab: () => set((s) => ({ fabOpen: !s.fabOpen })),
+      setFabOpen: (fabOpen) => set({ fabOpen }),
+      addFabMessage: (msg) =>
+        set((s) => ({ fabMessages: [...s.fabMessages, msg] })),
+      setFabProcessing: (fabProcessing) => set({ fabProcessing }),
+      clearFabMessages: () => set({ fabMessages: [] }),
+
+      // ─── Setters ─────────────────────────────────────────────
       setProvider: (provider, key, model = '') => set({ aiProvider: provider, aiKey: key, aiModel: model }),
       setAIKey: (aiKey) => set({ aiKey }),
       setAIProvider: (aiProvider) => set({ aiProvider }),
@@ -146,6 +221,10 @@ export const useNexusStore = create<NexusStore>()(
         dotDensity: state.dotDensity,
         hueRotationSpeed: state.hueRotationSpeed,
         twinkleIntensity: state.twinkleIntensity,
+        snapshots: state.snapshots,
+        annotations: state.annotations,
+        fabMessages: state.fabMessages,
+        fabOpen: state.fabOpen,
       }),
       onRehydrateStorage: () => (state) => {
         if (!state?.mcs) return;

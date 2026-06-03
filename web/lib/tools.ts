@@ -4,7 +4,7 @@ export interface Tool {
   name: string;
   description: string;
   parameters: Record<string, unknown>;
-  execute: (args: Record<string, any>, context: { tavilyKey?: string }) => Promise<unknown>;
+  execute: (args: Record<string, unknown>, context: { tavilyKey?: string }) => Promise<unknown>;
 }
 
 export const SEARCH_TOOL: Tool = {
@@ -13,7 +13,7 @@ export const SEARCH_TOOL: Tool = {
   parameters: {
     query: { type: 'string', description: 'The search query' },
   },
-  execute: async (args, { tavilyKey }) => {
+  execute: async (args: Record<string, unknown>, { tavilyKey }) => {
     const { query } = args as { query: string };
     if (!tavilyKey) throw new Error('Tavily API key required for search');
     const tvly = tavily({ apiKey: tavilyKey });

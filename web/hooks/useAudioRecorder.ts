@@ -86,7 +86,7 @@ export function useAudioRecorder(endpoint = '/api/cv-voice', apiKey = '') {
   }, [isRecording]);
 
   const stopRecording = useCallback(
-    async (extraFields?: Record<string, string>): Promise<VoiceApiResponse> => {
+    async (extraFields?: Record<string, string>, provider?: string): Promise<VoiceApiResponse> => {
       const active = recorderRef.current.mediaRecorder;
       if (!active || !isRecording) {
         return { ok: false, error: 'Recorder is not active.' };
@@ -115,12 +115,14 @@ export function useAudioRecorder(endpoint = '/api/cv-voice', apiKey = '') {
           }
         }
 
+        const headers: Record<string, string> = {};
+        if (apiKey) headers['x-api-key'] = apiKey;
+        if (provider) headers['x-provider'] = provider;
+
         const response = await fetch(endpoint, {
           method: 'POST',
           body: formData,
-          headers: {
-            ...(apiKey ? { 'x-api-key': apiKey } : {}),
-          },
+          headers,
         });
 
         const payload = await response.json();

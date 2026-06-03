@@ -102,8 +102,7 @@ function renderProfessional(mcs: MCS, maxExp: number, maxProj: number): string {
   <div class="inner">
     <header class="header">
       <div class="name">${esc(p.name || 'Your Name')}</div>
-      <div class="contact">${[p.title, p.email, p.phone, p.location].filter(Boolean).map(esc).join('  ·  ')}</div>
-      ${p.linkedin || p.github ? `<div class="links">${[p.linkedin, p.github].filter(Boolean).map(esc).join('  ·  ')}</div>` : ''}
+      <div class="contact">${[p.title, p.email, p.phone, p.location, p.website, p.linkedin, p.github, p.twitter].filter(Boolean).map(esc).join('  ·  ')}</div>
     </header>
     ${section('Professional Summary', mcs.summary ? `<p style="font-size:12.5px;line-height:1.65;color:#333">${esc(mcs.summary)}</p>` : '')}
     ${section('Experience', experienceHtml)}
@@ -213,7 +212,7 @@ function renderModern(mcs: MCS, maxExp: number, maxProj: number): string {
 <div class="page">
   <aside class="sidebar">
     <div class="avatar">${esc(initials)}</div>
-    ${sideSection('Contact', [p.email, p.phone, p.location, p.linkedin, p.github].filter(Boolean).map((item) => `<div class="si">${esc(item as string)}</div>`).join(''))}
+    ${sideSection('Contact', [p.email, p.phone, p.location, p.website, p.linkedin, p.github, p.twitter].filter(Boolean).map((item) => `<div class="si">${esc(item as string)}</div>`).join(''))}
     ${mcs.skills.length ? sideSection('Skills', mcs.skills.slice(0, 12).map((s) => `<div class="si">${esc(s.name)}</div>`).join('')) : ''}
     ${(mcs.languages ?? []).length ? sideSection('Languages', (mcs.languages ?? []).map((l) => `<div class="si">${esc(l.language)}${l.proficiency ? ` <span style="color:#475569">${esc(l.proficiency)}</span>` : ''}</div>`).join('')) : ''}
   </aside>
@@ -316,8 +315,7 @@ function renderAcademic(mcs: MCS, maxExp: number, maxProj: number): string {
   <header>
     <div class="name">${esc(p.name || 'Your Name')}</div>
     ${p.title ? `<div class="title">${esc(p.title)}</div>` : ''}
-    <div class="contact">${[p.email, p.phone, p.location].filter(Boolean).map(esc).join('  ·  ')}</div>
-    ${[p.website, p.linkedin, p.github].filter(Boolean).length ? `<div class="links">${[p.website, p.linkedin, p.github].filter(Boolean).map(esc).join('  ·  ')}</div>` : ''}
+    <div class="contact">${[p.email, p.phone, p.location, p.website, p.linkedin, p.github, p.twitter].filter(Boolean).map(esc).join('  ·  ')}</div>
   </header>
   ${mcs.summary ? section('Research Interests / Summary', `<p style="font-size:12.5px">${esc(mcs.summary)}</p>`) : ''}
   ${mcs.education.length ? section('Education', eduHtml) : ''}
@@ -417,7 +415,7 @@ function renderMinimal(mcs: MCS, maxExp: number, maxProj: number): string {
   <div class="header">
     <div class="name">${esc(p.name || 'Your Name')}</div>
     <div class="meta">
-      ${[p.title, p.email, p.phone, p.location].filter(Boolean).map((item, i) => `<span style="${i===0 ? 'color:#111;font-weight:500' : ''}">${esc(item as string)}</span>`).join('')}
+      ${[p.title, p.email, p.phone, p.location, p.website, p.linkedin, p.github, p.twitter].filter(Boolean).map((item, i) => `<span style="${i===0 ? 'color:#111;font-weight:500' : ''}">${esc(item as string)}</span>`).join('')}
     </div>
   </div>
   ${mcs.summary ? section('Summary', `<p style="font-size:11px;color:#555;line-height:1.75;padding-left:112px">${esc(mcs.summary)}</p>`) : ''}
@@ -524,7 +522,7 @@ function renderCreative(mcs: MCS, maxExp: number, maxProj: number): string {
     <div class="name">${esc(p.name || 'Your Name')}</div>
     ${p.title ? `<div class="title-badge">${esc(p.title)}</div>` : ''}
     <div class="contacts">
-      ${[p.email, p.phone, p.location, p.linkedin, p.github].filter(Boolean).map((item) => `<span>${esc(item as string)}</span>`).join('')}
+      ${[p.email, p.phone, p.location, p.website, p.linkedin, p.github, p.twitter].filter(Boolean).map((item) => `<span>${esc(item as string)}</span>`).join('')}
     </div>
   </div>
   <div class="inner">

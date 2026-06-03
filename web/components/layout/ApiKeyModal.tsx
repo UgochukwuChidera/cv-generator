@@ -5,10 +5,11 @@ import { useNexusStore } from '@/lib/store';
 import { useShell } from './ShellContext';
 import Tooltip from '@/components/ui/Tooltip';
 
-type UIProvider = 'claude' | 'openai' | 'gemini' | 'openrouter';
+type UIProvider = 'claude' | 'openai' | 'gemini' | 'openrouter' | 'groq';
 
 const PROVIDERS: Array<{ id: UIProvider; title: string; subtitle: string; hint: string; docs: string }> = [
   { id: 'openai', title: 'OpenAI', subtitle: 'gpt-4o / gpt-4o-mini', hint: 'sk-...', docs: 'https://platform.openai.com/api-keys' },
+  { id: 'groq', title: 'Groq', subtitle: 'llama-3.3-70b / mixtral', hint: 'gsk_...', docs: 'https://console.groq.com/keys' },
   { id: 'claude', title: 'Anthropic', subtitle: 'claude-3-5-sonnet', hint: 'sk-ant-...', docs: 'https://console.anthropic.com/settings/keys' },
   { id: 'gemini', title: 'Google Gemini', subtitle: 'gemini-1.5-pro', hint: 'AIza...', docs: 'https://aistudio.google.com/app/apikey' },
   { id: 'openrouter', title: 'OpenRouter', subtitle: 'Unified Intelligence', hint: 'sk-or-...', docs: 'https://openrouter.ai/keys' },

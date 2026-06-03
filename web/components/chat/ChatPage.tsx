@@ -1,12 +1,12 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { MCS } from '@nexus/schema';
 import { useNexusStore } from '@/lib/store';
-import { assessMCSQuality, normalizeMCS, type MissingField } from '@/lib/mcs';
+import { assessMCSQuality, normalizeMCS } from '@/lib/mcs';
 import { useShell } from '@/components/layout/ShellContext';
 import InputBar from './InputBar';
 import MessageBubble, { type ChatMessageModel } from './MessageBubble';
+import MCSViewer from './MCSViewer';
 
 const CHIPS = [
   'Build my CV from scratch',
@@ -14,14 +14,6 @@ const CHIPS = [
   'What fields are still missing?',
   'Help me improve my latest experience bullets',
 ];
-
-type ExtractResponse = {
-  ok: boolean;
-  error?: string;
-  mcs: MCS;
-  quality: { overall: number; missingFields: MissingField[] };
-  clarificationQuestions: string[];
-};
 
 export default function ChatPage() {
   const { aiKey, aiProvider, aiModel, tavilyKey, mcs: storeMcs, setMCS } = useNexusStore();
@@ -51,6 +43,10 @@ export default function ChatPage() {
     const newHistory = [...chatHistory, { role: 'user' as const, content: text }];
     setChatHistory(newHistory);
 
+    const aiId = nextId.current++;
+    setMessages((prev) => [...prev, { id: aiId, role: 'ai', text: '' }]);
+    setTyping(false);
+
     const res = await fetch('/api/ai/chat', {
       method: 'POST',
       headers: {
@@ -66,19 +62,45 @@ export default function ChatPage() {
       }),
     });
 
-    const data = await res.json();
-    if (!res.ok || !data.ok) throw new Error(data.error || 'Chat failed');
-
-    if (data.mcs) {
-      setMCS(data.mcs);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Chat failed' }));
+      throw new Error(err.error || 'Chat failed');
     }
 
-    const quality = assessMCSQuality(data.mcs);
-    pushAI(data.message, {
-      quality: quality.overall,
-      toEditor: true,
-    });
+    const reader = res.body?.getReader();
+    if (!reader) throw new Error('No response body');
 
+    const decoder = new TextDecoder();
+    let fullText = '';
+    let done = false;
+
+    while (!done) {
+      const { value, done: streamDone } = await reader.read();
+      done = streamDone;
+      if (!value) continue;
+
+      const chunk = decoder.decode(value, { stream: !done });
+      for (const line of chunk.split('\n')) {
+        if (!line.startsWith('data: ')) continue;
+        try {
+          const event = JSON.parse(line.slice(6));
+          if (event.type === 'token') {
+            fullText += event.text;
+            setMessages((prev) => prev.map((m) => (m.id === aiId ? { ...m, text: fullText } : m)));
+          } else if (event.type === 'done' && event.mcs) {
+            setMCS(event.mcs);
+            const quality = assessMCSQuality(event.mcs);
+            setMessages((prev) =>
+              prev.map((m) => (m.id === aiId ? { ...m, quality: quality.overall, toEditor: true } : m))
+            );
+          } else if (event.type === 'error') {
+            throw new Error(event.error);
+          }
+        } catch { /* skip malformed events */ }
+      }
+    }
+
+    setChatHistory((prev) => [...prev, { role: 'assistant', content: fullText }]);
     setStatus('Conversation updated');
   }
 
@@ -141,7 +163,15 @@ export default function ChatPage() {
           )}
 
           {messages.map((message) => (
-            <MessageBubble key={message.id} message={message} />
+            <MessageBubble 
+              key={message.id} 
+              message={message}
+              onRetry={(text) => {
+                setInput(text);
+                send(text);
+              }}
+              onCopy={() => setStatus('Copied to clipboard')}
+            />
           ))}
 
           {typing && (
@@ -155,6 +185,7 @@ export default function ChatPage() {
             </div>
           )}
         </div>
+        <MCSViewer mcs={storeMcs} />
       </div>
 
       <InputBar

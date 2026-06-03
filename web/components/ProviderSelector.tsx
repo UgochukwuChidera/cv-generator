@@ -3,6 +3,7 @@ import { useNexusStore } from '@/lib/store';
 
 const PROVIDERS = [
   { id: 'openai', label: 'OpenAI', placeholder: 'sk-...' },
+  { id: 'groq', label: 'Groq', placeholder: 'gsk_...' },
   { id: 'claude', label: 'Anthropic Claude', placeholder: 'sk-ant-...' },
   { id: 'gemini', label: 'Google Gemini', placeholder: 'AIza...' },
   { id: 'openrouter', label: 'OpenRouter', placeholder: 'sk-or-...' },

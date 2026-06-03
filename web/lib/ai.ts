@@ -7,7 +7,7 @@ import {
   type MCSQuality,
 } from './mcs';
 
-export type AIProvider = 'claude' | 'openai' | 'gemini' | 'openrouter';
+export type AIProvider = 'claude' | 'openai' | 'gemini' | 'openrouter' | 'groq';
 
 export interface AIConfig {
   provider: AIProvider;
@@ -19,7 +19,7 @@ export interface AIConfig {
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant' | 'tool';
   content: string;
-  tool_calls?: any[];
+  tool_calls?: { id: string; function: { name: string; arguments: string }; type: 'function' }[];
   tool_call_id?: string;
 }
 
@@ -43,6 +43,9 @@ export async function callAI(
 
   if (!apiKey) throw new Error('API key is required');
 
+  const TIMEOUT_MS = 30000;
+  const signal = AbortSignal.timeout(TIMEOUT_MS);
+
   if (provider === 'openai' || provider === 'openrouter') {
     const baseURL =
       provider === 'openrouter'
@@ -55,6 +58,7 @@ export async function callAI(
         'Content-Type': 'application/json',
         Authorization: `Bearer ${apiKey}`,
       },
+      signal,
       body: JSON.stringify({
         model: model || (provider === 'openai' ? 'gpt-4o-mini' : 'openai/gpt-4o-mini'),
         messages: messages.map(m => ({
@@ -69,7 +73,27 @@ export async function callAI(
     });
 
     if (!res.ok) {
-      throw new Error(`AI error (${provider}): ${res.status} ${await res.text()}`);
+      let errorMsg = `AI error (${provider}): ${res.status}`;
+      const contentType = res.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        try {
+          const errData = await res.json();
+          errorMsg += ` - ${errData.error?.message || errData.error || JSON.stringify(errData)}`;
+        } catch {
+          const text = await res.text();
+          errorMsg += ` - ${text.slice(0, 200)}`;
+        }
+      } else {
+        const text = await res.text();
+        errorMsg += ` - ${text.slice(0, 200)}`;
+      }
+      throw new Error(errorMsg);
+    }
+
+    const contentType = res.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      const text = await res.text();
+      throw new Error(`Expected JSON from ${provider}, got: ${text.slice(0, 100)}`);
     }
 
     const data = await res.json();
@@ -103,7 +127,7 @@ export async function callAI(
     return { role: 'assistant', content: String(msg?.content ?? '') };
   }
 
-  if (provider === 'claude' || provider === 'gemini') {
+  if (provider === 'claude' || provider === 'gemini' || provider === 'groq') {
      const system = messages.find(m => m.role === 'system')?.content || '';
      
      if (provider === 'claude') {
@@ -114,6 +138,7 @@ export async function callAI(
             'x-api-key': apiKey,
             'anthropic-version': '2023-06-01',
           },
+          signal,
           body: JSON.stringify({
             model: model || 'claude-3-haiku-20240307',
             max_tokens: 4096,
@@ -121,10 +146,67 @@ export async function callAI(
             messages: messages.filter(m => m.role !== 'system').map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content })),
           }),
         });
-        if (!res.ok) throw new Error(`AI error (claude): ${res.status} ${await res.text()}`);
+        if (!res.ok) {
+          let errorMsg = `AI error (claude): ${res.status}`;
+          const contentType = res.headers.get('content-type') || '';
+          if (contentType.includes('application/json')) {
+            try {
+              const errData = await res.json();
+              errorMsg += ` - ${errData.error?.message || JSON.stringify(errData)}`;
+            } catch {
+              const text = await res.text();
+              errorMsg += ` - ${text.slice(0, 200)}`;
+            }
+          } else {
+            const text = await res.text();
+            errorMsg += ` - ${text.slice(0, 200)}`;
+          }
+          throw new Error(errorMsg);
+        }
         const data = await res.json();
         return { role: 'assistant', content: String(data?.content?.[0]?.text ?? '') };
-     } else {
+     } else if (provider === 'groq') {
+        const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${apiKey}`,
+          },
+          signal,
+          body: JSON.stringify({
+            model: model || 'llama-3.3-70b-versatile',
+            messages: messages.map(m => ({
+              role: m.role === 'tool' ? 'assistant' : m.role,
+              content: m.content,
+            })),
+            temperature: 0.2,
+          }),
+        });
+        if (!res.ok) {
+          let errorMsg = `AI error (groq): ${res.status}`;
+          const contentType = res.headers.get('content-type') || '';
+          if (contentType.includes('application/json')) {
+            try {
+              const errData = await res.json();
+              errorMsg += ` - ${errData.error?.message || errData.error || JSON.stringify(errData)}`;
+            } catch {
+              const text = await res.text();
+              errorMsg += ` - ${text.slice(0, 200)}`;
+            }
+          } else {
+            const text = await res.text();
+            errorMsg += ` - ${text.slice(0, 200)}`;
+          }
+          throw new Error(errorMsg);
+        }
+        const contentType = res.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) {
+          const text = await res.text();
+          throw new Error(`Expected JSON from groq, got: ${text.slice(0, 100)}`);
+        }
+        const data = await res.json();
+        return { role: 'assistant', content: String(data?.choices?.[0]?.message?.content ?? '') };
+      } else {
         const rawModel = model || 'gemini-1.5-flash';
         const modelName = /^[a-z0-9.-]+$/i.test(rawModel) ? rawModel : 'gemini-1.5-flash';
         const res = await fetch(
@@ -132,16 +214,33 @@ export async function callAI(
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            signal,
             body: JSON.stringify({
               contents: messages.map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })),
             }),
           }
-        );
-        if (!res.ok) throw new Error(`AI error (gemini): ${res.status} ${await res.text()}`);
+);
+        if (!res.ok) {
+          let errorMsg = `AI error (gemini): ${res.status}`;
+          const contentType = res.headers.get('content-type') || '';
+          if (contentType.includes('application/json')) {
+            try {
+              const errData = await res.json();
+              errorMsg += ` - ${errData.error?.message || JSON.stringify(errData)}`;
+            } catch {
+              const text = await res.text();
+              errorMsg += ` - ${text.slice(0, 200)}`;
+            }
+          } else {
+            const text = await res.text();
+            errorMsg += ` - ${text.slice(0, 200)}`;
+          }
+          throw new Error(errorMsg);
+        }
         const data = await res.json();
         return { role: 'assistant', content: String(data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '') };
-     }
-  }
+      }
+   }
 
   throw new Error(`Unknown provider: ${provider}`);
 }
@@ -174,15 +273,20 @@ Always return a helpful conversational response.`;
   ];
 
   const response = await callAI(config, fullMessages);
-  
+
   let updatedMcs = mcs;
-  const jsonMatch = response.content.match(/```json\n([\s\S]*?)\n```/);
-  if (jsonMatch) {
-    try {
-      const patch = JSON.parse(jsonMatch[1]);
-      updatedMcs = normalizeMCS({ ...mcs, ...patch });
-    } catch (e) {
-      console.warn('Failed to parse MCS patch from AI response', e);
+  try {
+    const patch = parseAIJson<Partial<MCS>>(response.content);
+    updatedMcs = normalizeMCS({ ...mcs, ...patch });
+  } catch {
+    const jsonMatch = response.content.match(/```json\n([\s\S]*?)\n```/);
+    if (jsonMatch) {
+      try {
+        const patch = JSON.parse(jsonMatch[1]);
+        updatedMcs = normalizeMCS({ ...mcs, ...patch });
+      } catch (e) {
+        console.warn('Failed to parse MCS patch from AI response', e);
+      }
     }
   }
 
@@ -192,22 +296,38 @@ Always return a helpful conversational response.`;
   };
 }
 
-function parseAIJson<T>(raw: string): T {
+export function parseAIJson<T>(raw: string): T {
   const stripped = raw
     .replace(/```json\n?/gi, '')
     .replace(/```\n?/g, '')
     .trim();
 
-  try {
-    return JSON.parse(stripped) as T;
-  } catch {
+  const tryParse = (s: string) => {
+    try { return JSON.parse(s) as T; } catch { return null; }
+  };
+
+  let result = tryParse(stripped);
+  if (result) return result;
+
+  const braced = (() => {
     const start = stripped.indexOf('{');
     const end = stripped.lastIndexOf('}');
-    if (start >= 0 && end > start) {
-      return JSON.parse(stripped.slice(start, end + 1)) as T;
-    }
-    throw new Error('Invalid JSON response from AI provider');
-  }
+    if (start >= 0 && end > start) return stripped.slice(start, end + 1);
+    return stripped;
+  })();
+
+  result = tryParse(braced);
+  if (result) return result;
+
+  const repaired = braced
+    .replace(/(\s*,\s*)([}\]])/g, '$2')
+    .replace(/'/g, '"')
+    .replace(/([{,]\s*)(\w+)(\s*:)/g, '$1"$2"$3');
+
+  result = tryParse(repaired);
+  if (result) return result;
+
+  throw new Error('Invalid JSON response from AI provider');
 }
 
 export type GuidedExtractResult = {

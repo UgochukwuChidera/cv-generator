@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import type { MCS } from '@nexus/schema';
+import { normalizeMCS } from './mcs';
 
 export const UpdateExperienceActionSchema = z.object({
   type: z.literal('updateExperience'),
@@ -79,3 +81,48 @@ export type VoiceAssistantOutput = z.infer<typeof VoiceAssistantOutputSchema>;
 export type VoiceApiSuccess = z.infer<typeof VoiceApiSuccessSchema>;
 export type VoiceApiError = z.infer<typeof VoiceApiErrorSchema>;
 export type VoiceApiResponse = z.infer<typeof VoiceApiResponseSchema>;
+
+const DEFAULT_EXPERIENCE = {
+  company: '', role: '', startDate: '', endDate: '',
+  current: false, location: '', bullets: [] as string[],
+};
+
+export function applyVoiceAction(current: MCS | null, action: VoiceAction): MCS {
+  const next = normalizeMCS(current ?? {});
+
+  switch (action.type) {
+    case 'addSkill': {
+      const name = action.skill.name.trim();
+      if (!name) return next;
+      const exists = next.skills.some((skill) => skill.name.toLowerCase() === name.toLowerCase());
+      if (!exists) next.skills.push({ name, category: action.skill.category?.trim() || '' });
+      return normalizeMCS(next);
+    }
+    case 'generateSummary': {
+      next.summary = action.summary.trim();
+      return normalizeMCS(next);
+    }
+    case 'updatePersonal': {
+      next.personal = {
+        ...next.personal,
+        ...Object.fromEntries(
+          Object.entries(action.personal).map(([key, value]) => [key, typeof value === 'string' ? value.trim() : value])
+        ),
+      };
+      return normalizeMCS(next);
+    }
+    case 'updateExperience': {
+      const index = action.index ?? 0;
+      while (next.experience.length <= index) next.experience.push({ ...DEFAULT_EXPERIENCE });
+      next.experience[index] = {
+        ...next.experience[index],
+        ...action.experience,
+        bullets: action.experience.bullets?.map((b) => b.trim()).filter(Boolean) ?? next.experience[index].bullets,
+      };
+      return normalizeMCS(next);
+    }
+    case 'noop':
+    default:
+      return next;
+  }
+}
